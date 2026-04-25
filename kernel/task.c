@@ -79,6 +79,8 @@ int task_switch(struct task_t* task) {
         current_task = next_task;
     }
 
+    running_task->status = SUSPENDED;
+    next_task->status = RUNNING;
     return ctx_swap(&running_task->context, &next_task->context);
 }
 

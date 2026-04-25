@@ -9,7 +9,7 @@
 
 #include "ctx.h"
 
-enum task_status { NONE, READY, RUNNING, SLEEPING, SUSPENSE, FINISHED };
+enum task_status { NONE, READY, RUNNING, SLEEPING, SUSPENDED, FINISHED };
 
 // Task Control Block (TCB), infos sobre uma tarefa
 struct task_t {
