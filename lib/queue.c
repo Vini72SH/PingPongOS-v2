@@ -4,8 +4,8 @@
 
 #include "queue.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "kernel/memory.h"
+#include "libc.h"
 
 typedef struct node_t node_t;
 
@@ -27,7 +27,7 @@ struct queue_t {
 struct queue_t* queue_create() {
     struct queue_t* queue;
 
-    queue = malloc(sizeof(struct queue_t));
+    queue = mem_alloc(sizeof(struct queue_t));
     if (queue == NULL) return NULL;
 
     queue->size = 0;
@@ -50,11 +50,11 @@ int queue_destroy(struct queue_t* queue) {
 
     while (aux != NULL) {
         next = aux->next;
-        free(aux);
+        mem_free(aux);
         aux = next;
     }
 
-    free(queue);
+    mem_free(queue);
     queue = NULL;
 
     return NOERROR;
@@ -66,7 +66,7 @@ int queue_destroy(struct queue_t* queue) {
 int queue_add(struct queue_t* queue, void* item) {
     if ((queue == NULL) || (item == NULL)) return ERROR;
 
-    node_t* node = malloc(sizeof(node_t));
+    node_t* node = mem_alloc(sizeof(node_t));
     if (node == NULL) return ERROR;
 
     node->element = item;
@@ -114,7 +114,7 @@ int queue_del(struct queue_t* queue, void* item) {
     if (aux->next == NULL) queue->end = prev;
 
     queue->size--;
-    free(aux);
+    mem_free(aux);
 
     return NOERROR;
 }
@@ -188,19 +188,19 @@ void* queue_item(struct queue_t* queue) {
 // Frutas: [ undef undef undef ] (3 items)  se func == NULL
 void queue_print(char* name, struct queue_t* queue, void(func)(void*)) {
     if (queue == NULL) {
-        printf("%s: undef\n", name);
+        printk("%s: undef\n", name);
         return;
     }
 
-    printf("%s: [ ", name);
+    printk("%s: [ ", name);
     node_t* aux = queue->start;
     while (aux != NULL) {
         if (func == NULL)
-            printf("undef");
+            printk("undef");
         else
             func(aux->element);
-        printf(" ");
+        printk(" ");
         aux = aux->next;
     }
-    printf("] (%d items)\n", queue->size);
+    printk("] (%d items)\n", queue->size);
 }
