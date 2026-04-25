@@ -8,19 +8,18 @@
 // Teste da gestão básica de tarefas
 
 #include <assert.h>
+
+#include "kernel/ppos.h"
 #include "lib/libc.h"
-#include "ppos.h"
 
 static struct task_t *ping, *pong;
 
 // corpo da tarefa Ping
-void body_ping(void *)
-{
-    char *name = task_name(NULL);
+void body_ping(void*) {
+    char* name = task_name(NULL);
 
     printf("\t%s: inicio\n", name);
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         printf("\t%s: %d\n", name, i);
         task_switch(pong);
     }
@@ -29,13 +28,11 @@ void body_ping(void *)
 }
 
 // corpo da tarefa Pong
-void body_pong(void *)
-{
-    char *name = task_name(NULL);
+void body_pong(void*) {
+    char* name = task_name(NULL);
 
     printf("\t\t%s: inicio\n", name);
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 4; i++) {
         printf("\t\t%s: %d\n", name, i);
         task_switch(ping);
     }
@@ -44,10 +41,9 @@ void body_pong(void *)
 }
 
 // corpo da tarefa principal
-void user_main(void *arg)
-{
+void user_main(void* arg) {
     int status;
-    char *name = task_name(NULL);
+    char* name = task_name(NULL);
 
     printf("%s: inicio\n", name);
 

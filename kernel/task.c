@@ -1,6 +1,7 @@
 // PingPongOS - PingPong Operating System
 
 #include "ctx.h"
+#include "kernel/macros.h"
 #include "lib/libc.h"
 #include "memory.h"
 #include "tcb.h"
@@ -26,6 +27,10 @@ void task_init() {
     kernel_task.status = RUNNING;
 
     current_task = &kernel_task;
+
+#ifdef DEBUG
+    ppos_debug("subsystem task initiated\n");
+#endif
 }
 
 // cria uma nova tarefa: "name" é o nome da tarefa, "entry"
@@ -47,6 +52,11 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     ctx_create(&new_task->context, entry, arg, new_task->stack, STACKSIZE);
     new_task->creator = current_task;
     new_task->status = READY;
+
+#ifdef DEBUG
+    ppos_debug("task %d (%s) create task %d (%s)\n", current_task->id,
+               current_task->name, new_task->id, new_task->name);
+#endif
 
     return new_task;
 }
@@ -78,6 +88,11 @@ int task_switch(struct task_t* task) {
         next_task = current_task->creator;
         current_task = next_task;
     }
+
+#ifdef DEBUG
+    ppos_debug("task %d (%s) switch to %d (%s)\n", running_task->id,
+               running_task->name, next_task->id, next_task->name);
+#endif
 
     running_task->status = SUSPENDED;
     next_task->status = RUNNING;
