@@ -2,11 +2,12 @@
 
 #include "ctx.h"
 #include "kernel/macros.h"
-#include "lib/libc.h"
 #include "memory.h"
 #include "tcb.h"
 
 #define STACKSIZE 4096
+
+extern void (*user_main)(void* args);
 
 long int uid = 1;
 struct task_t kernel_task = {0};
@@ -53,10 +54,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->creator = current_task;
     new_task->status = READY;
 
-#ifdef DEBUG
     ppos_debug("task %d (%s) create task %d (%s)\n", current_task->id,
                current_task->name, new_task->id, new_task->name);
-#endif
 
     return new_task;
 }
@@ -66,7 +65,7 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
 // Retorno: NOERROR (0) ou ERROR (<0)
 int task_destroy(struct task_t* task) {
     if (task == NULL) return NOERROR;
-    if (task->status != FINISHED) return ERROR;
+    //    if (task->status != FINISHED) return ERROR;
 
     mem_free(task->stack);
 
