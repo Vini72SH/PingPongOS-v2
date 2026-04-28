@@ -8,9 +8,11 @@
 // Implementação simplificada de algumas funções básicas da biblioteca C,
 // que devem ser definidas aqui para nos liberar da GLibC.
 
-#include "hardware/serial.h"
-#include <stdbool.h>
 #include "libc.h"
+
+#include <stdbool.h>
+
+#include "hardware/serial.h"
 
 // macros do compilador para funções variádicas (usadas no printk)
 #define va_list __builtin_va_list
@@ -24,25 +26,20 @@ static unsigned int rand_number = 0;
 
 //----------------------------------------------------------------------
 
-void randseed(unsigned long seed)
-{
-    rand_number = seed;
-}
+void randseed(unsigned long seed) { rand_number = seed; }
 
 //----------------------------------------------------------------------
 
-unsigned long randnum(void)
-{
+unsigned long randnum(void) {
     // gerador pseudo-aleatorio simples por congruência linear
-//    rand_number = (1103515245L * rand_number + 12345) % (1 << 30);
+    //    rand_number = (1103515245L * rand_number + 12345) % (1 << 30);
     rand_number = (1664525L * rand_number + 1013904223L) % (1L << 31);
     return (rand_number);
 }
 
 //----------------------------------------------------------------------
 
-int abs(int num)
-{
+int abs(int num) {
     if (num < 0)
         return (-num);
     else
@@ -51,33 +48,24 @@ int abs(int num)
 
 //----------------------------------------------------------------------
 
-int mem_copy(const char *orig, char *dest, int size)
-{
-    if (!orig || !dest || size <= 0)
-        return (ERROR);
+int mem_copy(const char* orig, char* dest, int size) {
+    if (!orig || !dest || size <= 0) return (ERROR);
 
-    for (int i = 0; i < size; i++)
-        dest[i] = orig[i];
+    for (int i = 0; i < size; i++) dest[i] = orig[i];
 
     return (NOERROR);
 }
 
 //----------------------------------------------------------------------
 
-void putch(char c)
-{
-    hw_serial_put(c);
-}
+void putch(char c) { hw_serial_put(c); }
 
 //----------------------------------------------------------------------
 
-void putst(const char *s)
-{
-    if (!s)
-        s = "NULL";
+void putst(const char* s) {
+    if (!s) s = "NULL";
 
-    while (*s)
-    {
+    while (*s) {
         putch(*s);
         s++;
     }
@@ -86,21 +74,18 @@ void putst(const char *s)
 //----------------------------------------------------------------------
 
 // adaptado de from: https://operating-system-in-1000-lines.vercel.app/en/
-void printk(const char *fmt, ...)
-{
+void printk(const char* fmt, ...) {
     bool left_align;
-    //bool fill_zeros = false;
-    //bool signal_space = false;
+    // bool fill_zeros = false;
+    // bool signal_space = false;
     short width;
     va_list vargs;
 
     va_start(vargs, fmt);
 
-    while (*fmt)
-    {
+    while (*fmt) {
         // find a % mark, process it
-        if (*fmt == '%')
-        {
+        if (*fmt == '%') {
             // skip '%'
             fmt++;
 
@@ -113,8 +98,7 @@ void printk(const char *fmt, ...)
 
             // left alignment (%-)
             left_align = false;
-            if (*fmt == '-')
-            {
+            if (*fmt == '-') {
                 left_align = true;
                 fmt++;
             }
@@ -128,168 +112,144 @@ void printk(const char *fmt, ...)
 
             // width modifier (%NN)
             width = 0;
-            while (*fmt && *fmt >= '1' && *fmt <= '9')
-            {
+            while (*fmt && *fmt >= '1' && *fmt <= '9') {
                 width = 10 * width + (*fmt - '0');
                 fmt++;
             }
 
-            switch (*fmt)
-            {
+            switch (*fmt) {
+                // "%%" or '%' at the end of the format string
+                case '%':
+                case '\0':
+                    putch('%');
+                    break;
 
-            // "%%" or '%' at the end of the format string
-            case '%':
-            case '\0':
-                putch('%');
-                break;
+                // %c: char
+                case 'c': {
+                    int c = va_arg(vargs, int);
+                    putch(c);
+                    break;
+                }
 
-            // %c: char
-            case 'c':
-            {
-                int c = va_arg(vargs, int);
-                putch(c);
-                break;
-            }
+                // %s: string
+                case 's': {
+                    const char* s = va_arg(vargs, const char*);
+                    char* aux;
 
-            // %s: string
-            case 's':
-            {
-                const char *s = va_arg(vargs, const char *);
-                char *aux;
+                    // null string
+                    if (!s) s = "(null)";
 
-                // null string
-                if (!s)
-                s = "(null)";
+                    // decrement width according to string size
+                    aux = (char*)s;
+                    while (*aux) {
+                        width--;
+                        aux++;
+                    }
 
-                // decrement width according to string size
-                aux = (char *) s;
-                while (*aux)
-                {
+                    // print whitespaces before
+                    if (!left_align)
+                        while (width > 0) {
+                            putch(' ');
+                            width--;
+                        }
+
+                    // print string chars
+                    while (*s) {
+                        putch(*s);
+                        s++;
+                    }
+
+                    // print whitespaces after
+                    if (left_align)
+                        while (width > 0) {
+                            putch(' ');
+                            width--;
+                        }
+
+                    break;
+                }
+
+                // %d %i: integer, printed in decimal
+                case 'i':
+                case 'd': {
+                    bool negative;
+                    int divisor;
+                    int value = va_arg(vargs, int);
+
                     width--;
-                    aux++;
-                }
 
-                // print whitespaces before
-                if (!left_align)
-                    while (width > 0)
-                    {
-                        putch(' ');
+                    // treat negative number
+                    negative = false;
+                    if (value < 0) {
+                        value = -value;
+                        negative = true;
                         width--;
                     }
 
-                // print string chars
-                while (*s)
-                {
-                    putch(*s);
-                    s++;
-                }
-
-                // print whitespaces after
-                if (left_align)
-                    while (width > 0)
-                    {
-                        putch(' ');
+                    // calculate number of digits to print
+                    divisor = 1;
+                    while (value / divisor > 9) {
+                        divisor *= 10;
                         width--;
                     }
 
-                break;
-            }
+                    // print whitespaces before
+                    if (!left_align)
+                        while (width > 0) {
+                            putch(' ');
+                            width--;
+                        }
 
-            // %d %i: integer, printed in decimal
-            case 'i':
-            case 'd':
-            {
-                bool negative;
-                int divisor;
-                int value = va_arg(vargs, int);
+                    // print number signal
+                    if (negative) putch('-');
 
-                width--;
-
-                // treat negative number
-                negative = false;
-                if (value < 0)
-                {
-                    value = -value;
-                    negative = true;
-                    width--;
-                }
-
-                // calculate number of digits to print
-                divisor = 1;
-                while (value / divisor > 9)
-                {
-                    divisor *= 10;
-                    width--;
-                }
-
-                // print whitespaces before
-                if (!left_align)
-                    while (width > 0)
-                    {
-                        putch(' ');
-                        width--;
+                    // print number digits
+                    while (divisor > 0) {
+                        putch('0' + value / divisor);
+                        value %= divisor;
+                        divisor /= 10;
                     }
 
-                // print number signal
-                if (negative)
-                    putch('-');
+                    // print whitespaces after
+                    if (left_align)
+                        while (width > 0) {
+                            putch(' ');
+                            width--;
+                        }
 
-                // print number digits
-                while (divisor > 0)
-                {
-                    putch('0' + value / divisor);
-                    value   %= divisor;
-                    divisor /= 10;
+                    break;
                 }
 
-                // print whitespaces after
-                if (left_align)
-                    while (width > 0)
-                    {
-                        putch(' ');
-                        width--;
-                    }
+                // %p: long, printed in hexadecimal
+                case 'p': {
+                    unsigned nibble;
+                    unsigned long value = va_arg(vargs, unsigned long);
 
-                break;
-            }
+                    if (value) {
+                        putst("0x");
+                        for (int i = 15; i >= 0; i--) {
+                            nibble = (value >> (i * 4)) & 0xf;
+                            putch("0123456789abcdef"[nibble]);
+                        }
+                    } else
+                        putst("(nil)");
 
-            // %p: long, printed in hexadecimal
-            case 'p':
-            {
-                unsigned nibble;
-                unsigned long value = va_arg(vargs, unsigned long);
-
-                if (value)
-                {
-                    putst("0x");
-                    for (int i = 15; i >= 0; i--)
-                    {
-                        nibble = (value >> (i * 4)) & 0xf;
-                        putch("0123456789abcdef"[nibble]);
-                    }
+                    break;
                 }
-                else
-                    putst("(nil)");
 
-                break;
-            }
-
-            // %? unrecognized
-            default:
-            {
-                putst("%?");
-            }
+                // %? unrecognized
+                default: {
+                    putst("%?");
+                }
             }
         }
         // not a placeholder, just print it
-        else
-        {
+        else {
             putch(*fmt);
         }
 
         // take the next char in format
-        if (*fmt)
-            fmt++;
+        if (*fmt) fmt++;
     }
     va_end(vargs);
 }

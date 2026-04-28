@@ -29,9 +29,7 @@ void task_init() {
 
     current_task = &kernel_task;
 
-#ifdef DEBUG
     ppos_debug("subsystem task initiated\n");
-#endif
 }
 
 // cria uma nova tarefa: "name" é o nome da tarefa, "entry"
@@ -88,10 +86,8 @@ int task_switch(struct task_t* task) {
         current_task = next_task;
     }
 
-#ifdef DEBUG
     ppos_debug("task %d (%s) switch to %d (%s)\n", running_task->id,
                running_task->name, next_task->id, next_task->name);
-#endif
 
     running_task->status = SUSPENDED;
     next_task->status = RUNNING;

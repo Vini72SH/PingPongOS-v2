@@ -7,14 +7,14 @@
 
 // Funções básicas/iniciais do PPOS
 
+#include "ppos.h"
+
 #include "hardware/cpu.h"
 #include "lib/libc.h"
-#include "ppos.h"
 
 //----------------------------------------------------------------------
 
-static void ppos_start()
-{
+static void ppos_start() {
     printf("PPOS: system starting\n");
 
     // inicia os vários subsistemas
@@ -32,27 +32,25 @@ static void ppos_start()
 
 //----------------------------------------------------------------------
 
-void ppos_stop()
-{
+void ppos_stop() {
     printf("PPOS: system stopping\n", systime());
 
     // encerra os vários subsistemas (em ordem contrária ao init)
-    //block_stop("hardware/disk.dat");
-    //mqueue_stop();
-    //sem_stop();
-    //time_stop();
-    //sched_stop();
-    //dispatcher_stop();
-    //task_stop();
-    //mem_stop();
+    // block_stop("hardware/disk.dat");
+    // mqueue_stop();
+    // sem_stop();
+    // time_stop();
+    // sched_stop();
+    // dispatcher_stop();
+    // task_stop();
+    // mem_stop();
 
     printf("PPOS: system stopped (uptime %d ms)\n", systime());
 }
 
 //----------------------------------------------------------------------
 
-int main()
-{
+int main() {
     ppos_start();
     dispatcher();
     ppos_stop();
@@ -60,4 +58,3 @@ int main()
 }
 
 //----------------------------------------------------------------------
-

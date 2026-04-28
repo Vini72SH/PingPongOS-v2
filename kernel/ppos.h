@@ -16,16 +16,16 @@
 #endif
 
 // módulos do sistema operacional
-#include "macros.h"
-#include "tcb.h"
-#include "task.h"
-#include "dispatcher.h"
-#include "scheduler.h"
-#include "time.h"
-#include "memory.h"
-#include "semaphore.h"
-#include "mqueue.h"
 #include "block.h"
+#include "dispatcher.h"
+#include "macros.h"
+#include "memory.h"
+#include "mqueue.h"
+#include "scheduler.h"
+#include "semaphore.h"
+#include "task.h"
+#include "tcb.h"
+#include "time.h"
 
 // Inicia o sistema operacional
 static void ppos_start();
