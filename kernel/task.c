@@ -2,6 +2,7 @@
 
 #include "ctx.h"
 #include "kernel/macros.h"
+#include "lib/libc.h"
 #include "memory.h"
 #include "tcb.h"
 
@@ -66,6 +67,9 @@ int task_destroy(struct task_t* task) {
     //    if (task->status != FINISHED) return ERROR;
 
     mem_free(task->stack);
+    mem_free(task);
+
+    task = NULL;
 
     return NOERROR;
 }
