@@ -1,8 +1,11 @@
 // PingPongOS - PingPong Operating System
 
+#include <valgrind/valgrind.h>
+
 #include "ctx.h"
 #include "kernel/macros.h"
 #include "lib/libc.h"
+#include "lib/queue.h"
 #include "memory.h"
 #include "tcb.h"
 
@@ -13,6 +16,8 @@ extern void (*user_main)(void* args);
 long int uid = 1;
 struct task_t kernel_task = {0};
 struct task_t* current_task = NULL;
+
+extern struct queue_t* ready;
 
 /*
  * Esta função é chamada por ppos.c:ppos_init e inicia as variáveis necessárias
@@ -52,6 +57,12 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     ctx_create(&new_task->context, entry, arg, new_task->stack, STACKSIZE);
     new_task->creator = current_task;
     new_task->status = READY;
+    new_task->exit_code = 0;
+
+    new_task->vg_id =
+        VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);
+
+    queue_add(ready, new_task);
 
     ppos_debug("task %d (%s) create task %d (%s)\n", current_task->id,
                current_task->name, new_task->id, new_task->name);
@@ -64,7 +75,12 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
 // Retorno: NOERROR (0) ou ERROR (<0)
 int task_destroy(struct task_t* task) {
     if (task == NULL) return NOERROR;
-    //    if (task->status != FINISHED) return ERROR;
+    if (task->status != FINISHED) return ERROR;
+
+    ppos_debug("task %d (%s) destroy task %d (%s)\n", current_task->id,
+               current_task->name, task->id, task->name);
+
+    VALGRIND_STACK_DEREGISTER(task->vg_id);
 
     mem_free(task->stack);
     mem_free(task);
@@ -82,18 +98,16 @@ int task_switch(struct task_t* task) {
     struct task_t* running_task = current_task;
     struct task_t* next_task;
 
-    if (task != NULL) {
+    if (task != NULL)
         next_task = task;
-        current_task = task;
-    } else {
+    else
         next_task = current_task->creator;
-        current_task = next_task;
-    }
+
+    current_task = next_task;
 
     ppos_debug("task %d (%s) switch to %d (%s)\n", running_task->id,
                running_task->name, next_task->id, next_task->name);
 
-    running_task->status = SUSPENDED;
     next_task->status = RUNNING;
     return ctx_swap(&running_task->context, &next_task->context);
 }

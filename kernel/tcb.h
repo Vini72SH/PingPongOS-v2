@@ -19,6 +19,8 @@ struct task_t {
     struct ctx_t context;    // contexto armazenado da tarefa
     struct task_t* creator;  // ponteiro para a tarefa pai
     int status;              // status da tarefa
+    int exit_code;           // exit code da tarefa
+    int vg_id;               // registro da stack no valgrind
 };
 
 #endif
