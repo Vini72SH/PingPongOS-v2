@@ -21,6 +21,8 @@ struct task_t {
     int status;              // status da tarefa
     int exit_code;           // exit code da tarefa
     int vg_id;               // registro da stack no valgrind
+    int st_prio;             // prioridade estática da tarefa
+    int dn_prio;             // prioridade dinâmica da tarefa
 };
 
 #endif

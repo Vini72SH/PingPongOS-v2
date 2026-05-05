@@ -32,6 +32,9 @@ void task_init() {
     kernel_task.id = 0;
     kernel_task.name = "kernel";
     kernel_task.status = RUNNING;
+    kernel_task.creator = NULL;
+    kernel_task.st_prio = 0;
+    kernel_task.dn_prio = 0;
 
     current_task = &kernel_task;
 
@@ -58,6 +61,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->creator = current_task;
     new_task->status = READY;
     new_task->exit_code = 0;
+    new_task->st_prio = 0;
+    new_task->dn_prio = 0;
 
     new_task->vg_id =
         VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);
@@ -105,7 +110,7 @@ int task_switch(struct task_t* task) {
 
     current_task = next_task;
 
-    ppos_debug("task %d (%s) switch to %d (%s)\n", running_task->id,
+    ppos_debug("task %d (%s) switch to task %d (%s)\n", running_task->id,
                running_task->name, next_task->id, next_task->name);
 
     next_task->status = RUNNING;
