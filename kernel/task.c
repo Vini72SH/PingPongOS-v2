@@ -3,11 +3,12 @@
 #include <valgrind/valgrind.h>
 
 #include "ctx.h"
-#include "kernel/macros.h"
 #include "lib/libc.h"
 #include "lib/queue.h"
+#include "macros.h"
 #include "memory.h"
 #include "tcb.h"
+#include "time.h"
 
 #define STACKSIZE 4096
 
@@ -35,7 +36,8 @@ void task_init() {
     kernel_task.creator = NULL;
     kernel_task.st_prio = 0;
     kernel_task.dn_prio = 0;
-
+    kernel_task.quantum = QUANTUM;
+    kernel_task.type = KERNEL;
     current_task = &kernel_task;
 
     ppos_debug("subsystem task initiated\n");
@@ -63,6 +65,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->exit_code = 0;
     new_task->st_prio = 0;
     new_task->dn_prio = 0;
+    new_task->quantum = QUANTUM;
+    new_task->type = USER;
 
     new_task->vg_id =
         VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);

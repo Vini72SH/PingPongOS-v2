@@ -9,7 +9,10 @@
 
 #include "ctx.h"
 
+enum task_type { KERNEL, USER };
 enum task_status { NONE, READY, RUNNING, SLEEPING, SUSPENDED, FINISHED };
+
+typedef enum task_type task_type;
 
 // Task Control Block (TCB), infos sobre uma tarefa
 struct task_t {
@@ -23,6 +26,8 @@ struct task_t {
     int vg_id;               // registro da stack no valgrind
     int st_prio;             // prioridade estática da tarefa
     int dn_prio;             // prioridade dinâmica da tarefa
+    int quantum;             // Ticks de execução
+    task_type type;          // Tipo da tarefa
 };
 
 #endif

@@ -5,6 +5,7 @@
 #include "kernel/task.h"
 #include "kernel/tcb.h"
 #include "lib/queue.h"
+#include "time.h"
 
 // Dispatcher: gerencia os estados das tarefas.
 
@@ -27,6 +28,7 @@ void task_run(struct task_t* task) {
 // voltando para a fila de prontas
 void task_yield() {
     current_task->status = READY;
+    current_task->quantum = QUANTUM;
     queue_add(ready, current_task);
     task_switch(&kernel_task);
 }

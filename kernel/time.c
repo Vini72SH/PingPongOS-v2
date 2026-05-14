@@ -4,11 +4,25 @@
 
 // Gerência básica do tempo.
 
-void time_init()
-{
+#include "dispatcher.h"
+#include "hardware/cpu.h"
+#include "tcb.h"
+
+extern struct task_t* current_task;
+
+long int clock = 0;
+
+void timer_interrupt_handler(int irq) {
+    clock++;
+    if (current_task->type == USER) {
+        current_task->quantum--;
+        if (current_task->quantum == 0) task_yield();
+    }
 }
 
-int systime()
-{
-    return (0);
+void time_init() {
+    hw_irq_handle(IRQ_TIMER, timer_interrupt_handler);
+    hw_timer(1, 1);
 }
+
+int systime() { return clock; }
