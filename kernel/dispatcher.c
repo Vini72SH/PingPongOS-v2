@@ -93,6 +93,13 @@ void dispatcher() {
                     break;
 
                 case FINISHED:
+                    // printk(
+                    //     "PPOS: task %d (%s) exit code %d, %ld ms elapsed
+                    //     time, "
+                    //     "%ld ms cpu time, %ld activations\n",
+                    //     next_task->id, next_task->name, next_task->exit_code,
+                    //     next_task->lifetime, next_task->cputime,
+                    //     next_task->activations);
                     task_destroy(next_task);
                     break;
 

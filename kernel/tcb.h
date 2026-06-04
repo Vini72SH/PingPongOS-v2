@@ -27,7 +27,11 @@ struct task_t {
     int st_prio;             // prioridade estática da tarefa
     int dn_prio;             // prioridade dinâmica da tarefa
     int quantum;             // Ticks de execução
-    task_type type;          // Tipo da tarefa
+    long int lifetime;       // Tempo de vida da tarefa (milissegundos)
+    long int cputime;        // Tempo de CPU gasto pela tarefa (milissegundos)
+    long int activations;    // Ativações da tarefa
+
+    task_type type;  // Tipo da tarefa
 };
 
 #endif
