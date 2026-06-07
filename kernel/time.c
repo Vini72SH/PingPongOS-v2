@@ -4,9 +4,8 @@
 
 // Gerência básica do tempo.
 
-#include "dispatcher.h"
 #include "hardware/cpu.h"
-#include "tcb.h"
+#include "kernel/dispatcher.h"
 
 extern struct task_t* current_task;
 
@@ -22,7 +21,7 @@ void timer_interrupt_handler(int irq) {
 
 void time_init() {
     hw_irq_handle(IRQ_TIMER, timer_interrupt_handler);
-    hw_timer(1, 1);
+    hw_timer(1, 10);
 }
 
 int systime() { return clock; }

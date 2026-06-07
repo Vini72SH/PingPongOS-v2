@@ -87,7 +87,7 @@ int hw_timer(int first, int next)
     // configura o timer POSIX
     delay.it_value.tv_nsec = first * 1000000;
     delay.it_value.tv_sec = 0;
-    delay.it_interval.tv_nsec = first * 1000000;
+    delay.it_interval.tv_nsec = next * 1000000;
     delay.it_interval.tv_sec = 0;
 
     // arma o timer POSIX

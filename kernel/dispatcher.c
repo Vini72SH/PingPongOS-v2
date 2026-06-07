@@ -10,6 +10,7 @@
 // Dispatcher: gerencia os estados das tarefas.
 
 extern void(user_main)(void* args);
+
 extern struct task_t kernel_task;
 extern struct task_t* current_task;
 
@@ -37,17 +38,21 @@ void task_yield() {
 // a insere na fila "queue" (se não for NULL) e retorna
 // ao dispatcher.
 void task_suspend(struct queue_t* queue) {
-    current_task->status = SUSPENDED;
+    if (current_task != NULL) {
+        current_task->status = SUSPENDED;
 
-    if (queue != NULL) queue_add(queue, current_task);
+        if (queue != NULL) queue_add(queue, current_task);
 
-    task_switch(&kernel_task);
+        task_switch(&kernel_task);
+    }
 }
 
 // acorda uma tarefa: a retira da fila onde se encontra
 // suspensa (se estiver em uma) e a insere na fila de
 // prontas, para retomar (ou iniciar) sua execução.
 void task_awake(struct task_t* task) {
+    if (task == NULL) return;
+
     if (queue_has(suspended, task)) queue_del(suspended, task);
 
     task->status = READY;
@@ -57,10 +62,12 @@ void task_awake(struct task_t* task) {
 // encerra a execução da tarefa atual, informando um
 // "exit code", e retorna ao dispatcher.
 void task_exit(int exit_code) {
-    current_task->status = FINISHED;
-    current_task->exit_code = exit_code;
+    if (current_task != NULL) {
+        current_task->status = FINISHED;
+        current_task->exit_code = exit_code;
 
-    task_switch(&kernel_task);
+        task_switch(&kernel_task);
+    }
 }
 
 void dispatcher_init() {
