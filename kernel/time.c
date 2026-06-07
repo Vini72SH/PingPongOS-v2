@@ -21,7 +21,7 @@ void timer_interrupt_handler(int irq) {
 
 void time_init() {
     hw_irq_handle(IRQ_TIMER, timer_interrupt_handler);
-    hw_timer(1, 10);
+    hw_timer(1, 1);
 }
 
 int systime() { return clock; }
