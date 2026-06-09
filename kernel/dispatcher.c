@@ -63,6 +63,7 @@ void task_awake(struct task_t* task) {
 // "exit code", e retorna ao dispatcher.
 void task_exit(int exit_code) {
     if (current_task != NULL) {
+        current_task->lifetime = systime() - current_task->lifetime;
         current_task->status = FINISHED;
         current_task->exit_code = exit_code;
 
@@ -100,13 +101,12 @@ void dispatcher() {
                     break;
 
                 case FINISHED:
-                    // printk(
-                    //     "PPOS: task %d (%s) exit code %d, %ld ms elapsed
-                    //     time, "
-                    //     "%ld ms cpu time, %ld activations\n",
-                    //     next_task->id, next_task->name, next_task->exit_code,
-                    //     next_task->lifetime, next_task->cputime,
-                    //     next_task->activations);
+                    printk(
+                        "PPOS: task %d (%s) exit code %d, %d ms elapsed time, "
+                        "%d ms cpu time, %d activations\n",
+                        next_task->id, next_task->name, next_task->exit_code,
+                        next_task->lifetime, next_task->cputime,
+                        next_task->activations);
                     task_destroy(next_task);
                     break;
 
@@ -115,6 +115,13 @@ void dispatcher() {
             }
         }
     }
+
+    kernel_task.lifetime = systime() - kernel_task.lifetime;
+    printk(
+        "PPOS: task %d (%s) exit code %d, %d ms elapsed time, %d ms cpu time, "
+        "%d activations\n",
+        kernel_task.id, kernel_task.name, kernel_task.exit_code,
+        kernel_task.lifetime, kernel_task.cputime, kernel_task.activations);
 
     ppos_debug("dispatcher stopping, no more user tasks\n");
 

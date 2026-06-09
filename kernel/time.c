@@ -13,9 +13,12 @@ long int clock = 0;
 
 void timer_interrupt_handler(int irq) {
     clock++;
-    if (current_task->type == USER) {
-        current_task->quantum--;
-        if (current_task->quantum == 0) task_yield();
+    if (current_task != NULL) {
+        current_task->cputime++;
+        if (current_task->type == USER) {
+            current_task->quantum--;
+            if (current_task->quantum == 0) task_yield();
+        }
     }
 }
 

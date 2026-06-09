@@ -26,8 +26,11 @@ struct task_t {
     int vg_id;               // registro da stack no valgrind
     int st_prio;             // prioridade estática da tarefa
     int dn_prio;             // prioridade dinâmica da tarefa
-    int quantum;             // Ticks de execução
-    task_type type;          // Tipo da tarefa
+    int quantum;             // ticks de execução
+    int lifetime;            // tempo de vida total da tarefa
+    int cputime;             // tempo de cpu da tarefa
+    int activations;         // número de ativações
+    task_type type;          // tipo da tarefa
 };
 
 #endif

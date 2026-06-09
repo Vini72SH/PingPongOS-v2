@@ -35,6 +35,9 @@ void task_init() {
     kernel_task.st_prio = 0;
     kernel_task.dn_prio = 0;
     kernel_task.quantum = QUANTUM;
+    kernel_task.lifetime = systime();
+    kernel_task.cputime = 0;
+    kernel_task.activations = 1;
     kernel_task.type = KERNEL;
     current_task = &kernel_task;
 
@@ -64,6 +67,9 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->st_prio = 0;
     new_task->dn_prio = 0;
     new_task->quantum = QUANTUM;
+    new_task->lifetime = systime();
+    new_task->cputime = 0;
+    new_task->activations = 0;
     new_task->type = USER;
 
     new_task->vg_id =
@@ -116,6 +122,7 @@ int task_switch(struct task_t* task) {
     ppos_debug("task %d (%s) switch to task %d (%s)\n", running_task->id,
                running_task->name, next_task->id, next_task->name);
 
+    next_task->activations++;
     next_task->status = RUNNING;
     return ctx_swap(&running_task->context, &next_task->context);
 }
