@@ -8,7 +8,7 @@
 #include "tcb.h"
 #include "time.h"
 
-#define STACKSIZE 4096
+#define STACKSIZE 16384
 
 extern void (*user_main)(void* args);
 
@@ -55,12 +55,20 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     if (new_task == NULL) return NULL;
 
     char* stack = mem_alloc(STACKSIZE);
-    if (stack == NULL) return NULL;
+    if (stack == NULL) {
+        mem_free(new_task);
+        return NULL;
+    }
 
     new_task->id = uid++;
     new_task->name = name;
     new_task->stack = stack;
-    ctx_create(&new_task->context, entry, arg, new_task->stack, STACKSIZE);
+    if (ctx_create(&new_task->context, entry, arg, new_task->stack, STACKSIZE) !=
+        NOERROR) {
+        mem_free(new_task->stack);
+        mem_free(new_task);
+        return NULL;
+    }
     new_task->creator = current_task;
     new_task->status = READY;
     new_task->exit_code = 0;
@@ -75,7 +83,12 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->vg_id =
         VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);
 
-    queue_add(ready, new_task);
+    if (queue_add(ready, new_task) != NOERROR) {
+        VALGRIND_STACK_DEREGISTER(new_task->vg_id);
+        mem_free(new_task->stack);
+        mem_free(new_task);
+        return NULL;
+    }
 
     ppos_debug("task %d (%s) create task %d (%s)\n", current_task->id,
                current_task->name, new_task->id, new_task->name);

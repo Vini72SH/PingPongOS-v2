@@ -72,7 +72,7 @@ int queue_add(struct queue_t* queue, void* item) {
     node->element = item;
     node->next = NULL;
 
-    if (queue->start == NULL) {
+    if ((queue->size == 0) || (queue->start == NULL) || (queue->end == NULL)) {
         queue->start = node;
         queue->end = node;
         queue->it = node;
@@ -106,7 +106,11 @@ int queue_del(struct queue_t* queue, void* item) {
 
     if (queue->it == aux) queue->it = queue->it->next;
 
-    if (prev == NULL)
+    if ((prev == NULL) && (aux->next == NULL)) {
+        queue->start = NULL;
+        queue->end = NULL;
+        queue->it = NULL;
+    } else if (prev == NULL)
         queue->start = aux->next;
     else
         prev->next = aux->next;
