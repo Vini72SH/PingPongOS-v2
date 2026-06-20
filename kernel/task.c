@@ -40,6 +40,7 @@ void task_init() {
     kernel_task.activations = 1;
     kernel_task.type = KERNEL;
     current_task = &kernel_task;
+    kernel_task.waiting = queue_create();
 
     ppos_debug("subsystem task initiated\n");
 }
@@ -63,8 +64,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->id = uid++;
     new_task->name = name;
     new_task->stack = stack;
-    if (ctx_create(&new_task->context, entry, arg, new_task->stack, STACKSIZE) !=
-        NOERROR) {
+    if (ctx_create(&new_task->context, entry, arg, new_task->stack,
+                   STACKSIZE) != NOERROR) {
         mem_free(new_task->stack);
         mem_free(new_task);
         return NULL;
@@ -82,6 +83,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
 
     new_task->vg_id =
         VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);
+
+    new_task->waiting = queue_create();
 
     if (queue_add(ready, new_task) != NOERROR) {
         VALGRIND_STACK_DEREGISTER(new_task->vg_id);
@@ -109,6 +112,7 @@ int task_destroy(struct task_t* task) {
     ppos_debug("task %d (%s) destroy task %d (%s)\n", current_task->id,
                current_task->name, task->id, task->name);
 
+    queue_destroy(task->waiting);
     mem_free(task->stack);
     mem_free(task);
 

@@ -1,5 +1,6 @@
 // PingPongOS - PingPong Operating System
 
+#include "kernel/ctx.h"
 #include "kernel/macros.h"
 #include "kernel/scheduler.h"
 #include "kernel/task.h"
@@ -67,8 +68,25 @@ void task_exit(int exit_code) {
         current_task->status = FINISHED;
         current_task->exit_code = exit_code;
 
+        struct task_t* aux;
+        aux = queue_head(current_task->waiting);
+        while (aux != NULL) {
+            queue_del(current_task->waiting, aux);
+            task_awake(aux);
+            aux = queue_item(current_task->waiting);
+        }
+
         task_switch(&kernel_task);
     }
+}
+
+int task_wait(struct task_t* task) {
+    if (task == NULL) return ERROR;
+    if (task->status == FINISHED) return task->exit_code;
+
+    task_suspend(task->waiting);
+
+    return task->exit_code;
 }
 
 void dispatcher_init() {
@@ -84,9 +102,9 @@ void dispatcher_init() {
 void dispatcher() {
     ppos_debug("dispatcher started\n");
 
-    struct task_t* next_task;
+    struct task_t *main, *next_task;
 
-    task_create("user", user_main, NULL);
+    main = task_create("user", user_main, NULL);
     while (queue_size(ready) > 0) {
         next_task = scheduler(ready);
 
@@ -107,7 +125,6 @@ void dispatcher() {
                         next_task->id, next_task->name, next_task->exit_code,
                         next_task->lifetime, next_task->cputime,
                         next_task->activations);
-                    task_destroy(next_task);
                     break;
 
                 default:
@@ -116,12 +133,16 @@ void dispatcher() {
         }
     }
 
+    task_destroy(main);
+
     kernel_task.lifetime = systime() - kernel_task.lifetime;
     printk(
         "PPOS: task %d (%s) exit code %d, %d ms elapsed time, %d ms cpu time, "
         "%d activations\n",
         kernel_task.id, kernel_task.name, kernel_task.exit_code,
         kernel_task.lifetime, kernel_task.cputime, kernel_task.activations);
+
+    queue_destroy(kernel_task.waiting);
 
     ppos_debug("dispatcher stopping, no more user tasks\n");
 
