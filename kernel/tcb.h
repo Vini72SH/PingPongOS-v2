@@ -31,6 +31,7 @@ struct task_t {
     int lifetime;            // tempo de vida total da tarefa
     int cputime;             // tempo de cpu da tarefa
     int activations;         // número de ativações
+    int wakeup;              // hora de acordar da tarefa
     task_type type;          // tipo da tarefa
 
     struct queue_t* waiting;  // fila de tarefas esperando por esta tarefa

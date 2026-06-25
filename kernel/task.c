@@ -38,6 +38,7 @@ void task_init() {
     kernel_task.lifetime = systime();
     kernel_task.cputime = 0;
     kernel_task.activations = 1;
+    kernel_task.wakeup = 0;
     kernel_task.type = KERNEL;
     current_task = &kernel_task;
     kernel_task.waiting = queue_create();
@@ -79,6 +80,7 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->lifetime = systime();
     new_task->cputime = 0;
     new_task->activations = 0;
+    new_task->wakeup = 0;
     new_task->type = USER;
 
     new_task->vg_id =

@@ -1,5 +1,7 @@
 // PingPongOS - PingPong Operating System
 
+#include "kernel/dispatcher.h"
+
 #include "kernel/ctx.h"
 #include "kernel/macros.h"
 #include "kernel/scheduler.h"
@@ -17,6 +19,23 @@ extern struct task_t* current_task;
 
 struct queue_t* ready;
 struct queue_t* suspended;
+struct queue_t* sleeping;
+
+void wake_up_tasks() {
+    if (queue_size(sleeping) == 0) return;
+
+    int current_time = systime();
+    struct task_t* aux;
+    aux = queue_head(sleeping);
+    while (aux != NULL) {
+        if (aux->wakeup <= current_time) {
+            queue_del(sleeping, aux);
+            task_awake(aux);
+            aux = queue_item(sleeping);
+        } else
+            aux = queue_next(sleeping);
+    }
+}
 
 // executa a tarefa indicada: a retira da fila de prontas,
 // muda seu status para RODANDO e transfere a CPU para ela.
@@ -89,6 +108,18 @@ int task_wait(struct task_t* task) {
     return task->exit_code;
 }
 
+// a tarefa atual fica suspensa por t milissegundos;
+// a execução retorna ao dispatcher.
+void task_sleep(int t) {
+    int time_to_wake_up;
+
+    time_to_wake_up = systime() + t;
+    current_task->wakeup = time_to_wake_up;
+    current_task->status = SLEEPING;
+    queue_add(sleeping, current_task);
+    task_switch(&kernel_task);
+}
+
 void dispatcher_init() {
     ppos_debug("subsystem dispatcher initiated\n");
 
@@ -97,6 +128,9 @@ void dispatcher_init() {
 
     suspended = queue_create();
     if (suspended == NULL) return;
+
+    sleeping = queue_create();
+    if (sleeping == NULL) return;
 }
 
 void dispatcher() {
@@ -105,7 +139,7 @@ void dispatcher() {
     struct task_t *main, *next_task;
 
     main = task_create("user", user_main, NULL);
-    while (queue_size(ready) > 0) {
+    while (queue_size(ready) > 0 || queue_size(sleeping) > 0) {
         next_task = scheduler(ready);
 
         if (next_task != NULL) {
@@ -131,6 +165,8 @@ void dispatcher() {
                     break;
             }
         }
+
+        wake_up_tasks();
     }
 
     task_destroy(main);
@@ -146,6 +182,7 @@ void dispatcher() {
 
     ppos_debug("dispatcher stopping, no more user tasks\n");
 
+    queue_destroy(sleeping);
     queue_destroy(suspended);
     queue_destroy(ready);
 }
