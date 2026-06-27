@@ -62,6 +62,8 @@ void task_suspend(struct queue_t* queue) {
         current_task->status = SUSPENDED;
 
         if (queue != NULL) queue_add(queue, current_task);
+        if (queue_has(suspended, current_task) == false)
+            queue_add(suspended, current_task);
 
         task_switch(&kernel_task);
     }
@@ -139,7 +141,8 @@ void dispatcher() {
     struct task_t *main, *next_task;
 
     main = task_create("user", user_main, NULL);
-    while (queue_size(ready) > 0 || queue_size(sleeping) > 0) {
+    while ((queue_size(ready) > 0) || (queue_size(sleeping) > 0) ||
+           (queue_size(suspended) > 0)) {
         next_task = scheduler(ready);
 
         if (next_task != NULL) {
