@@ -53,6 +53,8 @@ struct task_t* scheduler(struct queue_t* ready_queue) {
     int next_prio, current_prio;
     struct task_t *next, *it;
 
+    if (queue_size(ready_queue) == 0) return NULL;
+
     next = queue_head(ready_queue);
     next_prio = sched_get_dynprio(next);
 
@@ -69,8 +71,6 @@ struct task_t* scheduler(struct queue_t* ready_queue) {
         it = queue_next(ready_queue);
         current_prio = sched_get_dynprio(it);
     }
-
-    if (next == NULL) return NULL;
 
     ppos_debug("task %d (%s) with prio %d is the next task\n", next->id,
                next->name, next_prio);

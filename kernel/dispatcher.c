@@ -141,8 +141,8 @@ void dispatcher() {
     struct task_t *main, *next_task;
 
     main = task_create("user", user_main, NULL);
-    while ((queue_size(ready) > 0) || (queue_size(sleeping) > 0) ||
-           (queue_size(suspended) > 0)) {
+    while (((queue_size(ready) > 0) || (queue_size(sleeping) > 0) ||
+            (queue_size(suspended) > 0))) {
         next_task = scheduler(ready);
 
         if (next_task != NULL) {

@@ -68,12 +68,16 @@ int sem_down(struct semaphore_t* s) {
     if (s == NULL) return ERROR;
     if (!queue_has(semaphores, s)) return ERROR;
 
-    int aux;
+    int suspend = 0;
+
     spin_lock(&s->lock);
     s->value--;
-    aux = s->value;
+    if (s->value < 0) {
+        suspend = 1;
+    }
     spin_unlock(&s->lock);
-    if (aux < 0) {
+
+    if (suspend) {
         printf("A tarefa %d (%s) será suspensa\n", current_task->id,
                current_task->name);
         task_suspend(s->waiting);
@@ -88,18 +92,23 @@ int sem_up(struct semaphore_t* s) {
     if (s == NULL) return ERROR;
     if (!queue_has(semaphores, s)) return ERROR;
 
-    struct task_t* task;
+    struct task_t* task = NULL;
+
     spin_lock(&s->lock);
     s->value++;
     if (s->value <= 0) {
         task = queue_head(s->waiting);
         if (task != NULL) {
             queue_del(s->waiting, task);
-            printf("A tarefa %d (%s) será acordada\n", task->id, task->name);
             task_awake(task);
         }
     }
+
     spin_unlock(&s->lock);
+
+    if (task != NULL) {
+        printf("A tarefa %d (%s) será acordada\n", task->id, task->name);
+    }
 
     return NOERROR;
 }
@@ -108,6 +117,7 @@ int sem_up(struct semaphore_t* s) {
 // Retorno: NOERROR (0) ou ERROR (<0)
 int sem_destroy(struct semaphore_t* s) {
     if (s == NULL) return ERROR;
+    if (!queue_has(semaphores, s)) return ERROR;
 
     struct task_t* aux;
     aux = queue_head(s->waiting);
