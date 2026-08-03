@@ -19,7 +19,7 @@
 
 // ponteiro nulo
 #ifndef NULL
-#define NULL ((void*)0)
+#define NULL ((void *)0)
 #endif
 
 // Substitui o printf da LibC onde este arquivo for incluído.
@@ -28,21 +28,21 @@
 // Copia "size" bytes da área de memória apontada por "orig"
 // para a área apontada por "dest".
 // Retorno: NOERROR ou ERROR.
-int mem_copy(const char* orig, char* dest, int size);
+int mem_copy (const char *orig, char *dest, int size);
 
 // Envia um caractere para o console.
-void putch(const char c);
+void putch (const char c);
 
 // Envia uma string para o console.
-void putst(const char* s);
+void putst (const char *s);
 
 // Imprime uma mensagem no console, de forma similar a printf.
 // Suporta os formatos %d %i %c %s %p %%
 // e os modificadores %NN (tamanho) e %- (alinhamento).
-void printk(const char* fmt, ...);
+void printk(const char *fmt, ...);
 
 // retorna o número sem sinal
-int abs(int num);
+int abs(int num) ;
 
 // define a semente do gerador de aleatórios
 void randseed(unsigned long seed);
@@ -51,9 +51,9 @@ void randseed(unsigned long seed);
 unsigned long randnum(void);
 
 // Encerra o programa normalmente, com o exit code informado.
-// void exit(int exit_code);
+//void exit(int exit_code);
 
 // Encerra o programa com erro
-// void abort();
+//void abort();
 
 #endif

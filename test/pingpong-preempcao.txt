@@ -63,4 +63,4 @@ user: fim
 				Pong: fim
 					Pung: fim
 PPOS: system stopping
-PPOS: system stopped (uptime 28816 ms)
+PPOS: system stopped (uptime 0 ms)

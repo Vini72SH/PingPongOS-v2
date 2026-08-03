@@ -1,11 +1,11 @@
 // PingPongOS - PingPong Operating System
 // Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// Versão 2.0 -- 06/2025
 
 #include "queue.h"
 
-#include "kernel/memory.h"
-#include "libc.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct node_t node_t;
 
@@ -27,7 +27,7 @@ struct queue_t {
 struct queue_t* queue_create() {
     struct queue_t* queue;
 
-    queue = mem_alloc(sizeof(struct queue_t));
+    queue = malloc(sizeof(struct queue_t));
     if (queue == NULL) return NULL;
 
     queue->size = 0;
@@ -50,11 +50,11 @@ int queue_destroy(struct queue_t* queue) {
 
     while (aux != NULL) {
         next = aux->next;
-        mem_free(aux);
+        free(aux);
         aux = next;
     }
 
-    mem_free(queue);
+    free(queue);
     queue = NULL;
 
     return NOERROR;
@@ -66,7 +66,7 @@ int queue_destroy(struct queue_t* queue) {
 int queue_add(struct queue_t* queue, void* item) {
     if ((queue == NULL) || (item == NULL)) return ERROR;
 
-    node_t* node = mem_alloc(sizeof(node_t));
+    node_t* node = malloc(sizeof(node_t));
     if (node == NULL) return ERROR;
 
     node->element = item;
@@ -118,7 +118,7 @@ int queue_del(struct queue_t* queue, void* item) {
     if (aux->next == NULL) queue->end = prev;
 
     queue->size--;
-    mem_free(aux);
+    free(aux);
 
     return NOERROR;
 }
@@ -192,19 +192,19 @@ void* queue_item(struct queue_t* queue) {
 // Frutas: [ undef undef undef ] (3 items)  se func == NULL
 void queue_print(char* name, struct queue_t* queue, void(func)(void*)) {
     if (queue == NULL) {
-        printk("%s: undef\n", name);
+        printf("%s: undef\n", name);
         return;
     }
 
-    printk("%s: [ ", name);
+    printf("%s: [ ", name);
     node_t* aux = queue->start;
     while (aux != NULL) {
         if (func == NULL)
-            printk("undef");
+            printf("undef");
         else
             func(aux->element);
-        printk(" ");
+        printf(" ");
         aux = aux->next;
     }
-    printk("] (%d items)\n", queue->size);
+    printf("] (%d items)\n", queue->size);
 }
