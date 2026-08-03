@@ -9,6 +9,10 @@
 
 #include "ctx.h"
 
+#define MAX -20
+#define MIN 20
+#define AGING -1
+
 enum task_status { NONE, READY, RUNNING, SLEEPING, SUSPENDED, FINISHED };
 
 // Task Control Block (TCB), infos sobre uma tarefa
@@ -20,6 +24,8 @@ struct task_t {
     struct task_t* creator;  // ponteiro para a tarefa pai
     int status;              // status da tarefa
     int vg_id;               // ID da pilha da tarefa no Valgrind
+    int st_prio;             // prioridade estática da tarefa
+    int dn_prio;             // prioridade dinâmica da tarefa
 };
 
 #endif
