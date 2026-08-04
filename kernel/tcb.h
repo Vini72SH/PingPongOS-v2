@@ -13,6 +13,7 @@
 #define MIN 20
 #define AGING -1
 
+enum task_type { KERNEL, USER };
 enum task_status { NONE, READY, RUNNING, SLEEPING, SUSPENDED, FINISHED };
 
 // Task Control Block (TCB), infos sobre uma tarefa
@@ -26,6 +27,8 @@ struct task_t {
     int vg_id;               // ID da pilha da tarefa no Valgrind
     int st_prio;             // prioridade estática da tarefa
     int dn_prio;             // prioridade dinâmica da tarefa
+    int quantum;             // quantum atual da tarefa
+    int type;                // tipo da tarefa
 };
 
 #endif

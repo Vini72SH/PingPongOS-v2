@@ -27,6 +27,8 @@ void task_init() {
     kernel_task.vg_id = 0;
     kernel_task.st_prio = MAX;
     kernel_task.dn_prio = MAX;
+    kernel_task.quantum = 0;
+    kernel_task.type = KERNEL;
     current_task = &kernel_task;
 
     ppos_debug("subsystem task initiated\n");
@@ -61,6 +63,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->status = READY;
     new_task->st_prio = 0;
     new_task->dn_prio = 0;
+    new_task->quantum = 10;
+    new_task->type = USER;
 
     ppos_debug("task %d (%s) create task %d (%s)\n", current_task->id,
                current_task->name, new_task->id, new_task->name);
