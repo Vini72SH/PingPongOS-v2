@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -11,7 +11,12 @@
 #define __PPOS_MEMORY__
 
 // inicia o subsistema de memória RAM (heap)
+// (chamada pelo núcleo na inicialização).
 void mem_init();
+
+// encerra o subsistema de memória RAM (heap)
+// (chamada pelo núcleo no encerramento).
+void mem_term();
 
 // informa a quantidade de memória total, em bytes
 int mem_size();

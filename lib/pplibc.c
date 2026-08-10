@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,17 +8,29 @@
 // Implementação simplificada de algumas funções básicas da biblioteca C,
 // que devem ser definidas aqui para nos liberar da GLibC.
 
+#define __PPOS__
+
+#ifdef __PPOS__
+#include "hardware/cpu.h"
 #include "hardware/serial.h"
+#define PUTCHAR hw_putchar
+#define IRQ_ENABLE hw_irq_enable
+#else
+#include <stdio.h>
+#define PUTCHAR putchar
+#define IRQ_ENABLE(x)
+#endif
+
 #include <stdbool.h>
-#include "libc.h"
+#include "pplibc.h"
 
 // macros do compilador para funções variádicas (usadas no printk)
-#define va_list __builtin_va_list
+#define va_list  __builtin_va_list
 #define va_start __builtin_va_start
-#define va_end __builtin_va_end
-#define va_arg __builtin_va_arg
+#define va_end   __builtin_va_end
+#define va_arg   __builtin_va_arg
 
-// estado interno do gerador de números pseudo-aleatórios
+// estado interno do gerador de números pseudoaleatórios
 // https://en.wikipedia.org/wiki/Linear_congruential_generator
 static unsigned int rand_number = 0;
 
@@ -34,7 +46,6 @@ void randseed(unsigned long seed)
 unsigned long randnum(void)
 {
     // gerador pseudo-aleatorio simples por congruência linear
-//    rand_number = (1103515245L * rand_number + 12345) % (1 << 30);
     rand_number = (1664525L * rand_number + 1013904223L) % (1L << 31);
     return (rand_number);
 }
@@ -66,7 +77,7 @@ int mem_copy(const char *orig, char *dest, int size)
 
 void putch(char c)
 {
-    hw_serial_put(c);
+    PUTCHAR(c);  // macro
 }
 
 //----------------------------------------------------------------------
@@ -78,14 +89,14 @@ void putst(const char *s)
 
     while (*s)
     {
-        putch(*s);
+        PUTCHAR(*s);  // macro
         s++;
     }
 }
 
 //----------------------------------------------------------------------
 
-// adaptado de from: https://operating-system-in-1000-lines.vercel.app/en/
+// adaptado de https://operating-system-in-1000-lines.vercel.app/en/
 void printk(const char *fmt, ...)
 {
     bool left_align;
@@ -93,6 +104,9 @@ void printk(const char *fmt, ...)
     //bool signal_space = false;
     short width;
     va_list vargs;
+
+    // inibe "interrupções" do hardware
+    IRQ_ENABLE(0);
 
     va_start(vargs, fmt);
 
@@ -195,7 +209,7 @@ void printk(const char *fmt, ...)
                 break;
             }
 
-            // %d %i: integer, printed in decimal
+            // %d %i: signed integer, printed in decimal
             case 'i':
             case 'd':
             {
@@ -233,6 +247,49 @@ void printk(const char *fmt, ...)
                 // print number signal
                 if (negative)
                     putch('-');
+
+                // print number digits
+                while (divisor > 0)
+                {
+                    putch('0' + value / divisor);
+                    value   %= divisor;
+                    divisor /= 10;
+                }
+
+                // print whitespaces after
+                if (left_align)
+                    while (width > 0)
+                    {
+                        putch(' ');
+                        width--;
+                    }
+
+                break;
+            }
+
+            // %u: unsigned integer, printed in decimal
+            case 'u':
+            {
+                int divisor;
+                unsigned int value = va_arg(vargs, unsigned int);
+
+                width--;
+
+                // calculate number of digits to print
+                divisor = 1;
+                while (value / divisor > 9)
+                {
+                    divisor *= 10;
+                    width--;
+                }
+
+                // print whitespaces before
+                if (!left_align)
+                    while (width > 0)
+                    {
+                        putch(' ');
+                        width--;
+                    }
 
                 // print number digits
                 while (divisor > 0)
@@ -292,6 +349,9 @@ void printk(const char *fmt, ...)
             fmt++;
     }
     va_end(vargs);
+
+    // libera "interrupções" do hardware
+    IRQ_ENABLE(1);
 }
 
 //----------------------------------------------------------------------

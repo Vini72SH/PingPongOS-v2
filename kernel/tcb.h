@@ -29,6 +29,10 @@ struct task_t {
     int dn_prio;             // prioridade dinâmica da tarefa
     int quantum;             // quantum atual da tarefa
     int type;                // tipo da tarefa
+    int lifetime;            // tempo de vida da tarefa
+    int cputime;             // tempo de execução da tarefa
+    int activations;         // qtd de ativações da tarefa
+    int exit_code;           // código de saída da tarefa
 };
 
 #endif

@@ -10,6 +10,8 @@ extern struct task_t* current_task;
 
 void sched_init() {}
 
+void sched_term() {}
+
 void sched_set_dn_prio(struct task_t* task, int prio) {
     if ((prio < MAX) || (prio > MIN)) return;
 

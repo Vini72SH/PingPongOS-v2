@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,11 +8,11 @@
 // Teste de semáforos (leve)
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
-static struct task_t *a1, *a2, *b1, *b2;
-static struct semaphore_t *s1, *s2;
+struct task_t *a1, *a2, *b1, *b2;	// descritores de tarefas
+int s1, s2;				// descritores de semáforos
 
 // corpo da tarefa A
 void body_a(void *arg)
@@ -23,16 +23,17 @@ void body_a(void *arg)
     {
         status = sem_down(s1);
         if (status == ERROR)
-            break;
+            task_exit(1);
 
-        printf("%5d ms: %s zig (%d)\n", systime(), (char *)arg, i);
+        printk("%5u ms: %s zig (%d)\n", time(), (char *)arg, i);
         task_sleep(1000);
 
         status = sem_up(s2);
         if (status == ERROR)
-            break;
+            task_exit(2);
     }
-    task_exit(0);
+
+    task_exit(NOERROR);
 }
 
 // corpo da tarefa B
@@ -44,30 +45,33 @@ void body_b(void *arg)
     {
         status = sem_down(s2);
         if (status == ERROR)
-            break;
+            task_exit(1);
 
-        printf("%5d ms: %s zag (%d)\n", systime(), (char *)arg, i);
+        printk("%5u ms: %s zag (%d)\n", time(), (char *)arg, i);
         task_sleep(1000);
 
         status = sem_up(s1);
         if (status == ERROR)
-            break;
+            task_exit(2);
     }
-    task_exit(0);
+    task_exit(NOERROR);
 }
 
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status;
+    int status, id;
+    char *name;
 
-    printf("user: inicio\n");
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // inicia semáforos
     s1 = sem_create(1);
-    assert(s1);
+    assert(s1 >= 0);
     s2 = sem_create(0);
-    assert(s2);
+    assert(s2 >= 0);
 
     // cria tarefas
     a1 = task_create("a1", body_a, "A1");
@@ -79,25 +83,25 @@ void user_main(void *arg)
     b2 = task_create("b2", body_b, "\t\t\t\tB2");
     assert(b2);
 
-    // aguarda a1 encerrar
+    // aguarda a1 encerrar sem erro
     status = task_wait(a1);
     assert(status == NOERROR);
 
-    // destroi semáforos
+    // destrói semáforos
     status = sem_destroy(s1);
     assert(status == NOERROR);
     status = sem_destroy(s2);
     assert(status == NOERROR);
 
-    // aguarda a2, b1 e b2 encerrarem
+    // aguarda a2, b1 e b2 encerrarem com erro
     status = task_wait(a2);
-    assert(status == NOERROR);
+    assert(status != NOERROR);
     status = task_wait(b1);
-    assert(status == NOERROR);
+    assert(status != NOERROR);
     status = task_wait(b2);
-    assert(status == NOERROR);
+    assert(status != NOERROR);
 
-    // destroi os descritores das tarefas
+    // destrói as tarefas
     status = task_destroy(a1);
     assert(status == NOERROR);
     status = task_destroy(a2);
@@ -107,7 +111,7 @@ void user_main(void *arg)
     status = task_destroy(b2);
     assert(status == NOERROR);
 
-    printf("user: fim\n");
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

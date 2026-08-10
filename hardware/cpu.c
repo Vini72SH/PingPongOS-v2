@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -10,14 +10,13 @@
 // padrão de API UNIX a usar (para sigaction)
 #define _XOPEN_SOURCE 700
 
-#include "cpu.h"
-
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/times.h>
-#include <time.h>
 #include <unistd.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/times.h>
+#include "cpu.h"
 
 #define NOERROR 0
 #define ERROR -1
@@ -32,27 +31,43 @@ static struct sigevent sigev;
 
 //----------------------------------------------------------------------
 
-int hw_irq_handle(int irq, void (*handle)(int)) {
-    if (irq < 1) return (ERROR);
+int hw_irq_handle(int irq, void (*handle)(int))
+{
+    if ( (irq < 1) || ((irq + SIGRTMIN) >= SIGRTMAX) )
+        return (ERROR);
 
-    if ((irq + SIGRTMIN) >= SIGRTMAX) return (ERROR);
-
-    if (!handle) return (ERROR);
-
-    // registra a ação para o sinal indicado
-    action.sa_handler = handle;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = SA_NODEFER;
-    if (sigaction(irq + SIGRTMIN, &action, 0) < 0) {
-        perror("IRQ:");
-        abort();
+    if (handle)
+    {
+        // registra a ação "handle" para o sinal indicado
+        action.sa_handler = handle;
+        sigemptyset(&action.sa_mask);
+        action.sa_flags = SA_NODEFER;
+        if (sigaction(irq + SIGRTMIN, &action, 0) < 0)
+        {
+            perror("IRQ:");
+            abort();
+        }
     }
+    else
+    {
+        // registra a ação default para o sinal indicado
+        action.sa_handler = SIG_DFL;
+        sigemptyset(&action.sa_mask);
+        action.sa_flags = 0;
+        if (sigaction(irq + SIGRTMIN, &action, 0) < 0)
+        {
+            perror("IRQ:");
+            abort();
+        }
+    }
+
     return (NOERROR);
 }
 
 //----------------------------------------------------------------------
 
-void hw_irq_enable(int enable) {
+void hw_irq_enable(int enable)
+{
     sigset_t mask;
 
     if (enable)
@@ -65,13 +80,17 @@ void hw_irq_enable(int enable) {
 
 //----------------------------------------------------------------------
 
-int hw_timer(int first, int next) {
-    if (first < 0 || next < 0) return (ERROR);
+int hw_timer(int first, int next)
+{
+    if (first < 0 || next < 0)
+        return (ERROR);
 
     // cria o timer
     sigev.sigev_notify = SIGEV_SIGNAL;
     sigev.sigev_signo = IRQ_TIMER + SIGRTMIN;
-    if (timer_create(CLOCK_REALTIME, &sigev, &timer) == -1) {
+    sigev.sigev_value.sival_ptr = &timer;
+    if (timer_create(CLOCK_REALTIME, &sigev, &timer) == -1)
+    {
         perror("TIMER:");
         abort();
     }
@@ -83,7 +102,8 @@ int hw_timer(int first, int next) {
     delay.it_interval.tv_sec = 0;
 
     // arma o timer POSIX
-    if (timer_settime(timer, 0, &delay, NULL) == -1) {
+    if (timer_settime(timer, 0, &delay, NULL) == -1)
+    {
         perror("TIMER:");
         abort();
     }
@@ -92,7 +112,8 @@ int hw_timer(int first, int next) {
 
 //----------------------------------------------------------------------
 
-void hw_wfi() {
+void hw_wfi()
+{
     // A syscall pause permite emular o comportamento da instrução HLT
     // (halt) ou WFI (wait for interrupt), que suspendem a CPU até a
     // próxima interrupção de hardware, para economizar energia.
@@ -103,16 +124,11 @@ void hw_wfi() {
 
 //----------------------------------------------------------------------
 
-void hw_poweroff(int error) {
-    // struct tms time;
-
-    // print CPU usage
-    // times(&time);
-    // printf("Hardware shutdown, cpu active for %ld ms\n",
-    //       10 * (time.tms_utime + time.tms_stime));
-
+void hw_poweroff(int error)
+{
     // encerra com erro, GDB pode ver o call stack
-    if (error) abort();
+    if (error)
+        abort();
 
     exit(0);
 }

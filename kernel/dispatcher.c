@@ -6,6 +6,7 @@
 #include "kernel/scheduler.h"
 #include "kernel/task.h"
 #include "kernel/tcb.h"
+#include "kernel/time.h"
 #include "lib/queue.h"
 
 extern void(user_main)(void* args);
@@ -27,6 +28,20 @@ void dispatcher_init() {
     if (finished_tasks == NULL) return;
 
     ppos_debug("subsystem dispatcher initiated\n");
+}
+
+void dispatcher_term() {
+    struct task_t* aux;
+
+    aux = queue_head(finished_tasks);
+    while (aux != NULL) {
+        task_destroy(aux);
+        aux = queue_next(finished_tasks);
+    }
+
+    queue_destroy(finished_tasks);
+    queue_destroy(suspended_tasks);
+    queue_destroy(ready_tasks);
 }
 
 void task_run(struct task_t* task) {
@@ -57,17 +72,9 @@ void task_awake(struct task_t* task) {
 
 void task_exit(int exit_code) {
     current_task->status = FINISHED;
+    current_task->lifetime = time() - current_task->lifetime;
+    current_task->exit_code = exit_code;
     task_switch(&kernel_task);
-}
-
-void destroy_tasks() {
-    struct task_t* aux;
-
-    aux = queue_head(finished_tasks);
-    while (aux != NULL) {
-        task_destroy(aux);
-        aux = queue_next(finished_tasks);
-    }
 }
 
 void dispatcher() {
@@ -79,14 +86,24 @@ void dispatcher() {
         if (next != NULL) {
             task_run(next);
 
-            if (next->status == FINISHED) queue_add(finished_tasks, next);
+            if (next->status == FINISHED) {
+                queue_add(finished_tasks, next);
+                printk(
+                    "PPOS: task %d (%s), %d ms run, %d ms cpu, %d acts, exit "
+                    "code "
+                    "%d\n",
+                    next->id, next->name, next->lifetime, next->cputime,
+                    next->activations, next->exit_code);
+            }
         }
     }
 
-    destroy_tasks();
-    queue_destroy(finished_tasks);
-    queue_destroy(suspended_tasks);
-    queue_destroy(ready_tasks);
-
     ppos_debug("dispatcher stopping, no more user tasks\n");
+
+    printk(
+        "PPOS: task %d (%s), %d ms run, %d ms cpu, %d acts, exit "
+        "code "
+        "%d\n",
+        kernel_task.id, kernel_task.name, kernel_task.lifetime,
+        kernel_task.cputime, kernel_task.activations, kernel_task.exit_code);
 }

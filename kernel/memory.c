@@ -4,21 +4,27 @@
 
 // Alocador básico de memória heap.
 
-// implementação trivial, a ser substituída no projeto de alocação de heap.
-
+// somente para a implementação trivial
 #include <stdlib.h>
 
-void mem_init()
-{
-}
-
+// implementação trivial, a ser substituída
 void *mem_alloc(int size)
 {
     return (malloc(size));
 }
 
-int mem_free(void *ptr)
+// implementação trivial, a ser substituída
+int mem_free(void *addr)
 {
-    free(ptr);
-    return(0);
+    free(addr);
+    return (NOERROR);
 }
+
+void mem_init()
+{
+}
+
+void mem_term()
+{
+}
+

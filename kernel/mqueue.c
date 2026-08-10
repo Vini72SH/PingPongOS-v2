@@ -8,3 +8,7 @@ void mqueue_init()
 {
 }
 
+void mqueue_term()
+{
+}
+
