@@ -2,6 +2,7 @@
 
 // Dispatcher: gerencia os estados das tarefas.
 
+#include "ctx.h"
 #include "kernel/macros.h"
 #include "kernel/scheduler.h"
 #include "kernel/task.h"
@@ -42,6 +43,22 @@ void dispatcher_term() {
     queue_destroy(finished_tasks);
     queue_destroy(suspended_tasks);
     queue_destroy(ready_tasks);
+}
+
+int task_switch(struct task_t* task) {
+    struct task_t* running_task = current_task;
+    struct task_t* next_task;
+    if (task != NULL)
+        next_task = task;
+    else
+        next_task = current_task->creator;
+    ppos_debug("task %d (%s) switch to task %d (%s)\n", running_task->id,
+               running_task->name, next_task->id, next_task->name);
+
+    current_task = next_task;
+    next_task->activations++;
+
+    return ctx_switch(&running_task->context, &next_task->context);
 }
 
 void task_run(struct task_t* task) {
