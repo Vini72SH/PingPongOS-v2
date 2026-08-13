@@ -8,6 +8,10 @@
 
 extern struct task_t* current_task;
 
+const int AGING = -1;
+const int MAX = -20;
+const int MIN = 20;
+
 void sched_init() {}
 
 void sched_term() {}

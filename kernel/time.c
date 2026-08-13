@@ -18,10 +18,7 @@ void time_handler(int irq) {
         current_task->cputime++;
         if (current_task->type == USER) {
             current_task->quantum--;
-            if (current_task->quantum == 0) {
-                current_task->quantum = QUANTUM;
-                task_yield();
-            }
+            if (current_task->quantum == 0) task_yield();
         }
     }
 }
