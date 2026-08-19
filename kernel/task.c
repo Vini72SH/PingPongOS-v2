@@ -18,6 +18,7 @@ struct task_t kernel_task = {0};
 struct task_t* current_task = NULL;
 
 extern struct queue_t* ready_tasks;
+extern struct queue_t* sleeping_tasks;
 
 // inicializa o subsistema de tarefas.
 // (chamada pelo núcleo na inicialização).
@@ -35,6 +36,7 @@ void task_init() {
     kernel_task.activations = 1;
     kernel_task.exit_code = 0;
     kernel_task.type = KERNEL;
+    kernel_task.waking_up_in = 0;
     kernel_task.waiting = NULL;
     current_task = &kernel_task;
 
@@ -85,6 +87,7 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->cputime = 0;
     new_task->activations = 0;
     new_task->exit_code = 0;
+    new_task->waking_up_in = 0;
     new_task->waiting = queue_create();
 
     if (queue_add(ready_tasks, new_task) != NOERROR) {
@@ -149,7 +152,12 @@ int task_wait(struct task_t* task) {
 
 // suspende a tarefa atual por t milissegundos; a execução retorna ao
 // núcleo/dispatcher.
-void task_sleep(int t) {}
+void task_sleep(int t) {
+    if (current_task != NULL) {
+        current_task->waking_up_in = time() + t;
+        task_suspend(sleeping_tasks);
+    }
+}
 
 // encerra a execução da tarefa atual, informando um código de encerramento
 // (exit_code); a execução retorna ao núcleo/dispatcher.

@@ -31,6 +31,7 @@ struct task_t {
     int cputime;             // tempo de execução da tarefa
     int activations;         // qtd de ativações da tarefa
     int exit_code;           // código de saída da tarefa
+    int waking_up_in;        // quando a tarefa deve acordar
     task_type type;          // tipo da tarefa
 
     struct queue_t* waiting;

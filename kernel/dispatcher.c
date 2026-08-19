@@ -18,6 +18,7 @@ extern struct task_t* current_task;
 
 struct queue_t* ready_tasks;
 struct queue_t* suspended_tasks;
+struct queue_t* sleeping_tasks;
 
 // inicia o subsistema dispatcher
 // (chamada pelo núcleo na inicialização).
@@ -28,12 +29,16 @@ void dispatcher_init() {
     suspended_tasks = queue_create();
     if (suspended_tasks == NULL) return;
 
+    sleeping_tasks = queue_create();
+    if (sleeping_tasks == NULL) return;
+
     ppos_debug("subsystem dispatcher initiated\n");
 }
 
 // encerra o subsistema dispatcher
 // (chamada pelo núcleo no encerramento).
 void dispatcher_term() {
+    queue_destroy(sleeping_tasks);
     queue_destroy(suspended_tasks);
     queue_destroy(ready_tasks);
 }
@@ -84,8 +89,24 @@ void task_suspend(struct queue_t* queue) {
 // para retomar (ou iniciar) sua execução.
 void task_awake(struct task_t* task) {
     queue_del(suspended_tasks, task);
+    queue_del(sleeping_tasks, task);
     task->status = READY;
     queue_add(ready_tasks, task);
+}
+
+void waking_up_tasks() {
+    struct task_t* aux;
+
+    long int current_time = time();
+    aux = queue_head(sleeping_tasks);
+    while (aux != NULL) {
+        if (aux->waking_up_in <= current_time) {
+            task_awake(aux);
+            aux = queue_item(sleeping_tasks);
+        } else {
+            aux = queue_next(sleeping_tasks);
+        }
+    }
 }
 
 // executa o dispatcher (chamada pelo núcleo após a inicialização).
@@ -95,7 +116,8 @@ void dispatcher() {
     struct task_t *main, *next;
 
     main = task_create("user", user_main, NULL);
-    while ((queue_size(ready_tasks) > 0) || (queue_size(suspended_tasks) > 0)) {
+    while ((queue_size(ready_tasks) > 0) || (queue_size(suspended_tasks) > 0) ||
+           (queue_size(sleeping_tasks) > 0)) {
         next = scheduler(ready_tasks);
         if (next != NULL) {
             task_run(next);
@@ -109,6 +131,8 @@ void dispatcher() {
                     next->activations, next->exit_code);
             }
         }
+
+        waking_up_tasks();
     }
 
     task_destroy(main);
