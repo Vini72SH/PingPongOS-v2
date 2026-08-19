@@ -3,12 +3,12 @@
 // Gerência básica de tarefas.
 #include <valgrind/valgrind.h>
 
+#include "kernel/dispatcher.h"
 #include "kernel/macros.h"
 #include "kernel/memory.h"
 #include "kernel/tcb.h"
 #include "kernel/time.h"
 #include "lib/queue.h"
-#include "kernel/dispatcher.h"
 
 const int STACKSIZE = 16384;
 
@@ -35,6 +35,7 @@ void task_init() {
     kernel_task.activations = 1;
     kernel_task.exit_code = 0;
     kernel_task.type = KERNEL;
+    kernel_task.waiting = NULL;
     current_task = &kernel_task;
 
     ppos_debug("subsystem task initiated\n");
@@ -84,6 +85,7 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->cputime = 0;
     new_task->activations = 0;
     new_task->exit_code = 0;
+    new_task->waiting = queue_create();
 
     if (queue_add(ready_tasks, new_task) != NOERROR) {
         VALGRIND_STACK_DEREGISTER(new_task->vg_id);
@@ -103,6 +105,8 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
 int task_destroy(struct task_t* task) {
     if (task == NULL) return ERROR;
     if (task->status != FINISHED) return ERROR;
+
+    queue_destroy(task->waiting);
 
     VALGRIND_STACK_DEREGISTER(task->vg_id);
     mem_free(task->stack);
@@ -134,7 +138,14 @@ void task_yield() {
 // suspende a tarefa atual até que a tarefa task termine; a execução retorna
 // ao núcleo/dispatcher. Se a tarefa task já terminou, retorna sem suspender.
 // Retorno: exit code tarefa que terminou ou ERROR.
-int task_wait(struct task_t* task) {}
+int task_wait(struct task_t* task) {
+    if (task == NULL) return ERROR;
+    if (task->status == FINISHED) return task->exit_code;
+
+    task_suspend(task->waiting);
+
+    return task->exit_code;
+}
 
 // suspende a tarefa atual por t milissegundos; a execução retorna ao
 // núcleo/dispatcher.
@@ -147,6 +158,15 @@ void task_exit(int exit_code) {
         current_task->status = FINISHED;
         current_task->lifetime = time() - current_task->lifetime;
         current_task->exit_code = exit_code;
+
+        struct task_t* aux;
+        aux = queue_head(current_task->waiting);
+        while (aux != NULL) {
+            task_awake(aux);
+            queue_del(current_task->waiting, aux);
+            aux = queue_head(current_task->waiting);
+        }
+
         task_switch(&kernel_task);
     }
 }

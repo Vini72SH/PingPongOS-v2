@@ -18,7 +18,6 @@ extern struct task_t* current_task;
 
 struct queue_t* ready_tasks;
 struct queue_t* suspended_tasks;
-struct queue_t* finished_tasks;
 
 // inicia o subsistema dispatcher
 // (chamada pelo núcleo na inicialização).
@@ -29,24 +28,12 @@ void dispatcher_init() {
     suspended_tasks = queue_create();
     if (suspended_tasks == NULL) return;
 
-    finished_tasks = queue_create();
-    if (finished_tasks == NULL) return;
-
     ppos_debug("subsystem dispatcher initiated\n");
 }
 
 // encerra o subsistema dispatcher
 // (chamada pelo núcleo no encerramento).
 void dispatcher_term() {
-    struct task_t* aux;
-
-    aux = queue_head(finished_tasks);
-    while (aux != NULL) {
-        task_destroy(aux);
-        aux = queue_next(finished_tasks);
-    }
-
-    queue_destroy(finished_tasks);
     queue_destroy(suspended_tasks);
     queue_destroy(ready_tasks);
 }
@@ -105,16 +92,15 @@ void task_awake(struct task_t* task) {
 void dispatcher() {
     ppos_debug("dispatcher started\n");
 
-    struct task_t* next;
+    struct task_t *main, *next;
 
-    task_create("user", user_main, NULL);
+    main = task_create("user", user_main, NULL);
     while ((queue_size(ready_tasks) > 0) || (queue_size(suspended_tasks) > 0)) {
         next = scheduler(ready_tasks);
         if (next != NULL) {
             task_run(next);
 
             if (next->status == FINISHED) {
-                queue_add(finished_tasks, next);
                 printk(
                     "PPOS: task %d (%s), %d ms run, %d ms cpu, %d acts, exit "
                     "code "
@@ -124,6 +110,8 @@ void dispatcher() {
             }
         }
     }
+
+    task_destroy(main);
 
     ppos_debug("dispatcher stopping, no more user tasks\n");
 

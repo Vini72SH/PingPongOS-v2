@@ -8,6 +8,7 @@
 #define __PPOS_TCB__
 
 #include "ctx.h"
+#include "lib/queue.h"
 
 enum task_type { KERNEL, USER };
 enum task_status { NONE, READY, RUNNING, SLEEPING, SUSPENDED, FINISHED };
@@ -31,6 +32,8 @@ struct task_t {
     int activations;         // qtd de ativações da tarefa
     int exit_code;           // código de saída da tarefa
     task_type type;          // tipo da tarefa
+
+    struct queue_t* waiting;
 };
 
 #endif
