@@ -34,6 +34,7 @@ struct task_t {
     int waking_up_in;        // quando a tarefa deve acordar
     task_type type;          // tipo da tarefa
 
+    struct queue_t* current_queue;
     struct queue_t* waiting;
 };
 

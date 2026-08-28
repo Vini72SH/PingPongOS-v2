@@ -37,6 +37,8 @@ void spin_unlock(int* lock) { (*lock) = 0; }
 int sem_create(int value) {
     struct semaphore_t* sem;
 
+    if (value < 0) return ERROR;
+
     sem = mem_alloc(sizeof(struct semaphore_t));
     if (sem == NULL) return ERROR;
 

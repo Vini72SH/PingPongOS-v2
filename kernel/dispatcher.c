@@ -72,6 +72,7 @@ void task_run(struct task_t* task) {
     if (task == NULL) return;
 
     queue_del(ready_tasks, task);
+    task->current_queue = NULL;
     task->status = RUNNING;
     task_switch(task);
 }
@@ -80,6 +81,7 @@ void task_run(struct task_t* task) {
 // SUSPENSA, a insere na fila "queue" (se não for NULL) e retorna ao dispatcher.
 void task_suspend(struct queue_t* queue) {
     current_task->status = SUSPENDED;
+    current_task->current_queue = queue;
     if (queue != NULL) queue_add(queue, current_task);
     task_switch(&kernel_task);
 }
@@ -88,8 +90,7 @@ void task_suspend(struct queue_t* queue) {
 // em uma fila), muda seu status para PRONTA e a insere na fila de prontas,
 // para retomar (ou iniciar) sua execução.
 void task_awake(struct task_t* task) {
-    queue_del(suspended_tasks, task);
-    queue_del(sleeping_tasks, task);
+    queue_del(task->current_queue, task);
     task->status = READY;
     queue_add(ready_tasks, task);
 }

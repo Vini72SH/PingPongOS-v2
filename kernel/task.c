@@ -37,6 +37,7 @@ void task_init() {
     kernel_task.exit_code = 0;
     kernel_task.type = KERNEL;
     kernel_task.waking_up_in = 0;
+    kernel_task.current_queue = NULL;
     kernel_task.waiting = NULL;
     current_task = &kernel_task;
 
@@ -88,6 +89,7 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->activations = 0;
     new_task->exit_code = 0;
     new_task->waking_up_in = 0;
+    new_task->current_queue = NULL;
     new_task->waiting = queue_create();
 
     if (queue_add(ready_tasks, new_task) != NOERROR) {
@@ -134,6 +136,7 @@ char* task_name(struct task_t* task) {
 void task_yield() {
     current_task->status = READY;
     current_task->quantum = QUANTUM;
+    current_task->current_queue = ready_tasks;
     queue_add(ready_tasks, current_task);
     task_switch(&kernel_task);
 }
@@ -166,6 +169,8 @@ void task_exit(int exit_code) {
         current_task->status = FINISHED;
         current_task->lifetime = time() - current_task->lifetime;
         current_task->exit_code = exit_code;
+
+        queue_del(current_task->current_queue, current_task);
 
         struct task_t* aux;
         aux = queue_head(current_task->waiting);
