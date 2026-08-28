@@ -1,6 +1,6 @@
-PPOS: system starting
-PPOS: system started (uptime 0 ms)
-    0 ms: user: inicio
+PPOS: system initializing
+PPOS: system ready (uptime 0 ms)
+    0 ms: user_main (id 1): inicio
     0 ms: user: espera Pang...
     0 ms: 	Pang: inicio
     0 ms: 	Pang vai dormir 1000 ms
@@ -176,7 +176,7 @@ PPOS: system started (uptime 0 ms)
 15900 ms: 				Pong vai dormir 2000 ms
 15900 ms: 		Peng dormiu     600 ms (ok)
 15900 ms: 		Peng: fim
-PPOS: task 3 (peng) exit code 0, 15900 ms elapsed time,     0 ms cpu time,    20 activations
+PPOS: task   3 (peng), 15900 ms run,     0 ms cpu,    20 acts, exit code   0
 16000 ms: 					Pung dormiu     200 ms (ok)
 16000 ms: 					Pung vai dormir 1200 ms
 16400 ms: 	Pang dormiu     1900 ms (ok)
@@ -199,13 +199,13 @@ PPOS: task 3 (peng) exit code 0, 15900 ms elapsed time,     0 ms cpu time,    20
 18000 ms: 				Pong vai dormir 200 ms
 18200 ms: 				Pong dormiu     200 ms (ok)
 18200 ms: 				Pong: fim
-PPOS: task 5 (pong) exit code 0, 18200 ms elapsed time,     0 ms cpu time,    20 activations
+PPOS: task   5 (pong), 18200 ms run,     0 ms cpu,    20 acts, exit code   0
 18700 ms: 					Pung dormiu     1400 ms (ok)
 18700 ms: 					Pung: fim
-PPOS: task 6 (pung) exit code 0, 18700 ms elapsed time,     0 ms cpu time,    21 activations
+PPOS: task   6 (pung), 18700 ms run,     0 ms cpu,    21 acts, exit code   0
 19000 ms: 			Ping dormiu     1900 ms (ok)
 19000 ms: 			Ping: fim
-PPOS: task 4 (ping) exit code 0, 19000 ms elapsed time,     0 ms cpu time,    19 activations
+PPOS: task   4 (ping), 19000 ms run,     0 ms cpu,    19 acts, exit code   0
 19200 ms: 	Pang dormiu     1400 ms (ok)
 19200 ms: 	Pang vai dormir 1600 ms
 20800 ms: 	Pang dormiu     1600 ms (ok)
@@ -216,7 +216,7 @@ PPOS: task 4 (ping) exit code 0, 19000 ms elapsed time,     0 ms cpu time,    19
 23700 ms: 	Pang vai dormir 800 ms
 24500 ms: 	Pang dormiu     800 ms (ok)
 24500 ms: 	Pang: fim
-PPOS: task 2 (pang) exit code 0, 24500 ms elapsed time,     0 ms cpu time,    20 activations
+PPOS: task   2 (pang), 24500 ms run,     0 ms cpu,    20 acts, exit code   0
 24500 ms: user: Pang acabou
 24500 ms: user: espera Peng...
 24500 ms: user: Peng acabou
@@ -226,8 +226,8 @@ PPOS: task 2 (pang) exit code 0, 24500 ms elapsed time,     0 ms cpu time,    20
 24500 ms: user: Pong acabou
 24500 ms: user: espera Pung...
 24500 ms: user: Pung acabou
-24500 ms: user: fim
-PPOS: task 1 (user) exit code 0, 24500 ms elapsed time,     0 ms cpu time,     2 activations
-PPOS: task 0 (kernel) exit code 0, 24500 ms elapsed time, 24500 ms cpu time,   103 activations
-PPOS: system stopping
-PPOS: system stopped (uptime 24500 ms)
+24500 ms: user_main fim
+PPOS: task   1 (user_main), 24500 ms run,     0 ms cpu,     2 acts, exit code   0
+PPOS: task   0 (kernel), 24500 ms run, 24500 ms cpu,   103 acts, exit code   0
+PPOS: system terminating
+PPOS: system terminated (uptime 24500 ms)

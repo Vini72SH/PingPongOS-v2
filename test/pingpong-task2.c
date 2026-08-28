@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
 // Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// Versão 2.1 -- 07/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,8 +8,8 @@
 // Teste da gestão básica de tarefas
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
 #define NUMTASKS 512
 
@@ -22,14 +22,14 @@ void body_task(void *arg)
     int next;
 
     id = task_id(NULL);
-    printf("\tIniciei  tarefa %5d\n", id);
+    printk("\tIniciei  tarefa %5d\n", id);
 
     // passa o controle para a proxima tarefa
     next = ((long)arg + 1) % NUMTASKS;
-    printf("\tVou mudar para a tarefa %d\n", task_id(task[next]));
+    printk("\tVou mudar para a tarefa %d\n", task_id(task[next]));
     task_switch(task[next]);
 
-    printf("\tEncerrei tarefa %5d\n", id);
+    printk("\tEncerrei tarefa %5d\n", id);
 
     task_switch(NULL);
 }
@@ -37,36 +37,38 @@ void body_task(void *arg)
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status;
-    char *name = task_name(NULL);
+    int status, id;
+    char *name;
 
-    printf("%s: inicio\n", name);
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // inicia tarefas
     for (long i = 0; i < NUMTASKS; i++)
     {
         task[i] = task_create(NULL, body_task, (void *)i);
         assert(task[i]);
-        printf("%s: criei a tarefa %d\n", name, task_id(task[i]));
+        printk("%s: criei a tarefa %d\n", name, task_id(task[i]));
     }
 
     // passa o controle para cada uma delas em sequencia
     for (long i = 0; i < NUMTASKS; i++)
     {
-        printf("%s: vou ativar a tarefa %d\n", name, task_id(task[i]));
+        printk("%s: vou ativar a tarefa %d\n", name, task_id(task[i]));
         status = task_switch(task[i]);
         assert(status == NOERROR);
     }
 
-    // destroi os descritores
+    // destrói as tarefas
     for (long i = 0; i < NUMTASKS; i++)
     {
-        printf("%s: vou destruir a tarefa %d\n", name, task_id(task[i]));
+        printk("%s: vou destruir a tarefa %d\n", name, task_id(task[i]));
         status = task_destroy(task[i]);
         assert(status == NOERROR);
     }
 
-    printf("%s: fim\n", name);
+    printk("%5u ms: %s fim\n", time(), name);
 
     task_switch(NULL);
 }

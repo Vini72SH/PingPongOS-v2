@@ -1,16 +1,16 @@
-PPOS: system starting
-PPOS: system started (uptime 0 ms)
-user: criando as tarefas
-user: fim
-	Pang: inicio
+PPOS: system initializing
+PPOS: system ready (uptime 0 ms)
+    0 ms: user_main (id 1): inicio
+    0 ms: user_main fim
+	Pang (id 2): inicio
 	Pang: 0
-		Peng: inicio
+		Peng (id 3): inicio
 		Peng: 0
-			Ping: inicio
+			Ping (id 4): inicio
 			Ping: 0
-				Pong: inicio
+				Pong (id 5): inicio
 				Pong: 0
-					Pung: inicio
+					Pung (id 6): inicio
 					Pung: 0
 	Pang: 1
 		Peng: 1
@@ -37,5 +37,5 @@ user: fim
 			Ping: fim
 				Pong: fim
 					Pung: fim
-PPOS: system stopping
-PPOS: system stopped (uptime 0 ms)
+PPOS: system terminating
+PPOS: system terminated (uptime 0 ms)

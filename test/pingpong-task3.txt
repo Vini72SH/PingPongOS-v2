@@ -1,6 +1,6 @@
-PPOS: system starting
-PPOS: system started (uptime 0 ms)
-user: inicio
+PPOS: system initializing
+PPOS: system ready (uptime 0 ms)
+    0 ms: user_main (id 1): inicio
 	Estou na tarefa     2
 	Estou na tarefa     3
 	Estou na tarefa     4
@@ -513,6 +513,6 @@ user: inicio
 	Estou na tarefa   511
 	Estou na tarefa   512
 	Estou na tarefa   513
-user: fim
-PPOS: system stopping
-PPOS: system stopped (uptime 0 ms)
+    0 ms: user_main fim
+PPOS: system terminating
+PPOS: system terminated (uptime 0 ms)

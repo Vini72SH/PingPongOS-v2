@@ -1,143 +1,123 @@
 // PingPongOS - PingPong Operating System
 
+// Semáforos e spinlocks
+
 #include "kernel/semaphore.h"
 
-#include <stdio.h>
-
-#include "kernel/ctx.h"
 #include "kernel/dispatcher.h"
 #include "kernel/macros.h"
 #include "kernel/memory.h"
 #include "kernel/tcb.h"
+#include "lib/map.h"
 #include "lib/queue.h"
 
-long int sid;
-
+extern struct task_t kernel_task;
 extern struct task_t* current_task;
-struct queue_t* semaphores = NULL;
+
+const int NUM_SEMAPHORES = 32;
 
 struct semaphore_t {
+    int id;
     int lock;
     int value;
-    long int id;
-    struct queue_t* waiting;
+    struct queue_t* tasks;
 };
 
+struct map_t* semaphores = NULL;
+
+void sem_init() { semaphores = map_create(NUM_SEMAPHORES); }
+
+void sem_term() { map_destroy(semaphores); }
+
+// trava um spin-lock (busy wait)
 void spin_lock(int* lock) { while (__sync_fetch_and_or(lock, 1)); }
 
+// libera um spin-lock
 void spin_unlock(int* lock) { (*lock) = 0; }
 
-void sem_init() {
-    sid = 0;
-    semaphores = queue_create();
-    if (semaphores == NULL) return;
-}
-
 // Cria um novo semáforo, inicializado com value >= 0.
-// Retorno: ptr para o semáforo ou NULL (erro).
-struct semaphore_t* sem_create(int value) {
+// Retorno: descritor do semáforo ou -1 (erro).
+int sem_create(int value) {
     struct semaphore_t* sem;
 
-    if (semaphores == NULL) {
-        sid = 0;
-        semaphores = queue_create();
-        if (semaphores == NULL) return NULL;
-    }
+    if (value < 0) return ERROR;
 
     sem = mem_alloc(sizeof(struct semaphore_t));
-    if (sem == NULL) return NULL;
+    if (sem == NULL) return ERROR;
 
-    sem->id = sid++;
+    sem->id = map_put(semaphores, sem);
     sem->lock = 0;
     sem->value = value;
-    sem->waiting = queue_create();
+    sem->tasks = queue_create();
 
-    if (sem->waiting == NULL) {
-        mem_free(sem);
-        return NULL;
+    return sem->id;
+}
+
+// destrói um semáforo, liberando recursos e tarefas bloqueadas
+// Retorno: NOERROR (0) ou ERROR (<0)
+int sem_destroy(int sem_id) {
+    struct semaphore_t* sem = map_del(semaphores, sem_id);
+    if (sem == NULL) return ERROR;
+
+    struct task_t* aux;
+    aux = queue_head(sem->tasks);
+    while (aux != NULL) {
+        task_awake(aux);
+        queue_del(sem->tasks, aux);
+        aux = queue_head(sem->tasks);
     }
 
-    queue_add(semaphores, sem);
+    queue_destroy(sem->tasks);
+    mem_free(sem);
 
-    return sem;
+    return NOERROR;
 }
 
 // Requisita acesso a um semáforo
 // Retorno: NOERROR (0) ou ERROR (<0)
-int sem_down(struct semaphore_t* s) {
-    if (s == NULL) return ERROR;
-    if (!queue_has(semaphores, s)) return ERROR;
+int sem_down(int sem_id) {
+    struct semaphore_t* sem = map_get(semaphores, sem_id);
+    if (sem == NULL) return ERROR;
 
-    int suspend = 0;
+    hw_irq_enable(0);
+    spin_lock(&sem->lock);
 
-    spin_lock(&s->lock);
-    s->value--;
-    if (s->value < 0) {
-        suspend = 1;
+    sem->value--;
+    if (sem->value < 0) {
+        current_task->status = SUSPENDED;
+        current_task->current_queue = sem->tasks;
+        queue_add(sem->tasks, current_task);
+        spin_unlock(&sem->lock);
+        hw_irq_enable(1);
+        task_switch(&kernel_task);
+    } else {
+        spin_unlock(&sem->lock);
+        hw_irq_enable(1);
     }
-    spin_unlock(&s->lock);
 
-    if (suspend) {
-        printf("A tarefa %d (%s) será suspensa\n", current_task->id,
-               current_task->name);
-        task_suspend(s->waiting);
-    }
+    sem = map_get(semaphores, sem_id);
+    if (sem == NULL) return ERROR;
 
     return NOERROR;
 }
 
 // libera o acesso a um semáforo
 // Retorno: NOERROR (0) ou ERROR (<0)
-int sem_up(struct semaphore_t* s) {
-    if (s == NULL) return ERROR;
-    if (!queue_has(semaphores, s)) return ERROR;
+int sem_up(int sem_id) {
+    struct semaphore_t* sem = map_get(semaphores, sem_id);
+    if (sem == NULL) return ERROR;
 
     struct task_t* task = NULL;
 
-    spin_lock(&s->lock);
-    s->value++;
-    if (s->value <= 0) {
-        task = queue_head(s->waiting);
-        if (task != NULL) {
-            queue_del(s->waiting, task);
-            task_awake(task);
-        }
+    hw_irq_enable(0);
+    spin_lock(&sem->lock);
+    sem->value++;
+    if (sem->value <= 0) {
+        task = queue_head(sem->tasks);
+        if (task != NULL) task_awake(task);
     }
-
-    spin_unlock(&s->lock);
-
-    if (task != NULL) {
-        printf("A tarefa %d (%s) será acordada\n", task->id, task->name);
-    }
-
-    return NOERROR;
-}
-
-// destrói um semáforo, liberando recursos e tarefas bloqueadas
-// Retorno: NOERROR (0) ou ERROR (<0)
-int sem_destroy(struct semaphore_t* s) {
-    if (s == NULL) return ERROR;
-    if (!queue_has(semaphores, s)) return ERROR;
-
-    struct task_t* aux;
-    aux = queue_head(s->waiting);
-    while (aux != NULL) {
-        queue_del(s->waiting, aux);
-        task_awake(aux);
-        printf("A tarefa %d (%s) será acordada após a destruição do semáforo\n",
-               aux->id, aux->name);
-        aux = queue_head(s->waiting);
-    }
-
-    // Remove o semáforo da lista global de semáforos
-    queue_del(semaphores, s);
-    queue_destroy(s->waiting);
-    mem_free(s);
-
-    if (queue_size(semaphores) == 0) {
-        queue_destroy(semaphores);
-        semaphores = NULL;
-    }
+    spin_unlock(&sem->lock);
+    hw_irq_enable(1);
 
     return NOERROR;
 }

@@ -1,11 +1,11 @@
 // PingPongOS - PingPong Operating System
 // Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// Versão 2.0 -- 06/2025
 
 #include "queue.h"
 
 #include "kernel/memory.h"
-#include "libc.h"
+#include "lib/pplibc.h"
 
 typedef struct node_t node_t;
 

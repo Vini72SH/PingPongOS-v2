@@ -1,6 +1,6 @@
-PPOS: system starting
-PPOS: system started (uptime 0 ms)
-    0 ms: user inicia
+PPOS: system initializing
+PPOS: system ready (uptime 0 ms)
+    0 ms: user_main (id 1): inicio
     0 ms: 			agrup inicia
     0 ms: 						cons0 inicia
     0 ms: 						cons1 inicia
@@ -93,21 +93,21 @@ PPOS: system started (uptime 0 ms)
 16068 ms: prod0 envia 2
 16858 ms: prod2 envia 20
 16870 ms: 			agrup termina
-PPOS: task 2 (agrup) exit code 0, 16870 ms elapsed time,     0 ms cpu time,    25 activations
-16870 ms: user destroi fila_inteiros
-16870 ms: user destroi fila_pacotes
-16870 ms: user termina
-PPOS: task 1 (user) exit code 0, 16870 ms elapsed time,     0 ms cpu time,     2 activations
+PPOS: task   2 (agrup), 16870 ms run,     0 ms cpu,    25 acts, exit code   0
+16870 ms: user_main destroi fila_inteiros
+16870 ms: user_main destroi fila_pacotes
 16870 ms: 						cons1 termina
-PPOS: task 4 (cons1) exit code 0, 16870 ms elapsed time,     0 ms cpu time,    12 activations
+PPOS: task   4 (cons1), 16870 ms run,     0 ms cpu,    12 acts, exit code   0
 16870 ms: 						cons0 termina
-PPOS: task 3 (cons0) exit code 0, 16870 ms elapsed time,     0 ms cpu time,    12 activations
+PPOS: task   3 (cons0), 16870 ms run,     0 ms cpu,    12 acts, exit code   0
 16980 ms: prod2 termina
-PPOS: task 7 (prod2) exit code 0, 16980 ms elapsed time,     0 ms cpu time,    14 activations
+PPOS: task   7 (prod2), 16980 ms run,     0 ms cpu,    14 acts, exit code   0
 17900 ms: prod0 termina
-PPOS: task 5 (prod0) exit code 0, 17900 ms elapsed time,     0 ms cpu time,    14 activations
+PPOS: task   5 (prod0), 17900 ms run,     0 ms cpu,    14 acts, exit code   0
 18066 ms: prod1 termina
-PPOS: task 6 (prod1) exit code 0, 18066 ms elapsed time,     0 ms cpu time,    11 activations
-PPOS: task 0 (kernel) exit code 0, 18066 ms elapsed time, 18066 ms cpu time,    91 activations
-PPOS: system stopping
-PPOS: system stopped (uptime 18066 ms)
+PPOS: task   6 (prod1), 18066 ms run,     0 ms cpu,    11 acts, exit code   0
+18066 ms: user_main fim
+PPOS: task   1 (user_main), 18066 ms run,     0 ms cpu,     5 acts, exit code   0
+PPOS: task   0 (kernel), 18066 ms run, 18066 ms cpu,    94 acts, exit code   0
+PPOS: system terminating
+PPOS: system terminated (uptime 18066 ms)

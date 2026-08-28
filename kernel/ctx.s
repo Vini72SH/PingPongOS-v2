@@ -1,6 +1,6 @@
 # PingPongOS - PingPong Operating System
-# Prof. Carlos A. Maziero, DINF UFPR
-# Versão 2.0 -- Junho de 2025
+# © Prof. Carlos A. Maziero, DINF UFPR
+# Versão 2.1 -- 06/2026
 
 # ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 # ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -34,21 +34,21 @@
 #-----------------------------------------------------------------------
 
 # saves the current context in ctx1 and transfers control to ctx2
-.type ctx_swap, @function
-.global ctx_swap
+.type ctx_switch, @function
+.global ctx_switch
 
-ctx_swap:
+ctx_switch:
     # Arguments:
     # rdi: *ctx1
     # rsi: *ctx2
 
     # if ctx1 == ctx2, goto error
     cmp %rdi, %rsi
-    jz ctx_swap_error
+    jz ctx_switch_error
 
     # if ctx1 == NULL, do not save current context
     cmp $0, %rdi
-    jz ctx_swap_load_ctx2
+    jz ctx_switch_load_ctx2
 
     # save CPU registers in ctx1 struct
     mov %r8,  OFF_R8(%rdi)    # ctx->r8 = %r8
@@ -71,7 +71,7 @@ ctx_swap:
     #  :                     :
     #  :                     :
     #  +---------------------+
-    #  | caller stack bottom | <- stack pointer before calling ctx_swap
+    #  | caller stack bottom | <- stack pointer before calling ctx_switch
     #  +---------------------+
     #  | ret addr (8 bytes)  | <- stack pointer now (%rsp)
     #  +---------------------+
@@ -84,10 +84,10 @@ ctx_swap:
     lea 8(%rsp), %rcx         # %rcx = *(%rsp + 8)
     mov %rcx, OFF_RSP(%rdi)   # *(%rdi + OFF_RSP) = %rcx
 
-ctx_swap_load_ctx2:
+ctx_switch_load_ctx2:
     # if ctx2 == NULL, do not load ctx2 into the CPU
     cmp $0, %rsi
-    jz ctx_swap_noerror
+    jz ctx_switch_noerror
 
     # load CPU registers from ctx2 struct, except %rsi because
     # its current value is being used
@@ -115,12 +115,12 @@ ctx_swap_load_ctx2:
     # now we can load %rsi with value stored in ctx2->rsi
     mov OFF_RSI(%rsi), %rsi
 
-ctx_swap_noerror:
+ctx_switch_noerror:
     # no errors, return 0
     xor %eax, %eax
     ret
 
-ctx_swap_error:
+ctx_switch_error:
     # error, return -1
     movl $-1, %eax
     ret
@@ -190,7 +190,7 @@ ctx_create:
     mov %rcx, OFF_RSP(%rdi)       # ctx->rsp = stack
 
     # ctx->rsp should be decremented by 8 to keep it 16-byte aligned
-    # when the ctx_swap function returns, because the ret instruction
+    # when the ctx_switch function returns, because the ret instruction
     # pops an 8-byte return address from the stack
     subq $0x8, OFF_RSP(%rdi)      # ctx->rsp -= 8
 

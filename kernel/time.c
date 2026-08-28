@@ -1,17 +1,18 @@
 // PingPongOS - PingPong Operating System
 
-// Este arquivo PODE/DEVE ser alterado.
-
 // Gerência básica do tempo.
 
-#include "hardware/cpu.h"
-#include "kernel/dispatcher.h"
+#include "kernel/time.h"
 
-extern struct task_t* current_task;
+#include "hardware/cpu.h"
+#include "kernel/task.h"
+#include "lib/pplibc.h"
 
 long int clock = 0;
 
-void timer_interrupt_handler(int irq) {
+extern struct task_t* current_task;
+
+void time_handler(int irq) {
     clock++;
     if (current_task != NULL) {
         current_task->cputime++;
@@ -23,8 +24,10 @@ void timer_interrupt_handler(int irq) {
 }
 
 void time_init() {
-    hw_irq_handle(IRQ_TIMER, timer_interrupt_handler);
+    hw_irq_handle(IRQ_TIMER, time_handler);
     hw_timer(1, 1);
 }
 
-int systime() { return clock; }
+void time_term() {}
+
+unsigned int time() { return clock; }

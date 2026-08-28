@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 07/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -17,7 +17,7 @@ sem as devidas adaptações.
 To-do:
 - aceitar stack == NULL para não alterar a pilha do contexto.
 - salvar/restaurar registradores de ponto flutuante %xmm*
-- SEGV se função do contexto encerrar sem ctx_swap (falta uc_link).
+- SEGV se função do contexto encerrar sem ctx_switch (falta uc_link).
 */
 
 #ifndef __CTX__
@@ -83,10 +83,10 @@ int ctx_create(struct ctx_t *ctx, void(entry)(void *),
                void *arg, void *stack, uint64_t size);
 
 /*
-Salva o estado atual da CPU em ctx1 (se não for NULL) e
-carrega na CPU o estado salvo em ctx2 (se não for NULL).
+Troca contextos: salva o estado atual da CPU em ctx1 (se não for
+NULL) e carrega na CPU o estado salvo em ctx2 (se não for NULL).
 Retorno: 0 em sucesso, -1 em erro (vide ctx.s).
 */
-int ctx_swap(struct ctx_t *ctx1, struct ctx_t *ctx2);
+int ctx_switch(struct ctx_t *ctx1, struct ctx_t *ctx2);
 
 #endif

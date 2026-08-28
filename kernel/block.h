@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -11,10 +11,12 @@
 #define __PPOS_BLOCK__
 
 // inicia o subsistema de gestão do disco virtual armazenado em "disk_image"
+// (chamada pelo núcleo na inicialização).
 void block_init(char *disk_image);
 
 // encerra o subsistema de gestão do disco virtual
-void block_stop(char *disk_image);
+// (chamada pelo núcleo no encerramento).
+void block_term(char *disk_image);
 
 // retorna o tamanho de cada bloco do disco, em bytes
 int block_size();

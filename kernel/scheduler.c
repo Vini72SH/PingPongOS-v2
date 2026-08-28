@@ -1,8 +1,10 @@
 // PingPongOS - PingPong Operating System
 
+// Escalonador de tarefas prontas.
+
+#include "kernel/macros.h"
 #include "kernel/tcb.h"
 #include "lib/queue.h"
-#include "macros.h"
 
 extern struct task_t* current_task;
 
@@ -12,54 +14,52 @@ const int MIN = 20;
 
 void sched_init() {}
 
-// muda a prioridade de uma tarefa
+void sched_term() {}
+
+void sched_set_dn_prio(struct task_t* task, int prio) {
+    if ((prio < MAX) || (prio > MIN)) return;
+
+    if (task == NULL)
+        current_task->dn_prio = prio;
+    else
+        task->dn_prio = prio;
+}
+
+int sched_get_dn_prio(struct task_t* task) {
+    if (task == NULL) return current_task->dn_prio;
+
+    return task->dn_prio;
+}
+
 void sched_setprio(struct task_t* task, int prio) {
-    if (prio > MAX && prio < MIN) {
-        struct task_t* correct_task = (task) ? (task) : (current_task);
+    if ((prio < MAX) || (prio > MIN)) return;
 
-        ppos_debug("task %d (%s) set prio %d to task %d (%s)\n",
-                   current_task->id, current_task->name, prio, correct_task->id,
-                   correct_task->name);
-
-        correct_task->st_prio = prio;
-        correct_task->dn_prio = prio;
+    if (task == NULL) {
+        current_task->st_prio = prio;
+        current_task->dn_prio = prio;
+    } else {
+        task->st_prio = prio;
+        task->dn_prio = prio;
     }
 }
 
-// obtem a prioridade de uma tarefa
 int sched_getprio(struct task_t* task) {
-    if (task != NULL) return task->st_prio;
+    if (task == NULL) return current_task->st_prio;
 
-    return current_task->st_prio;
+    return task->st_prio;
 }
 
-void sched_set_dynprio(struct task_t* task, int prio) {
-    if (prio > MAX && prio < MIN) {
-        if (task != NULL)
-            task->dn_prio = prio;
-        else
-            current_task->dn_prio = prio;
-    }
-}
-
-int sched_get_dynprio(struct task_t* task) {
-    if (task != NULL) return task->dn_prio;
-
-    return current_task->dn_prio;
-}
-
-// função escalonador: devolve a próxima tarefa a escalonar na fila
 struct task_t* scheduler(struct queue_t* ready_queue) {
+    if (queue_size(ready_queue) == 0) return NULL;
+
     int next_prio, current_prio;
     struct task_t *next, *it;
 
-    if (queue_size(ready_queue) == 0) return NULL;
-
     next = queue_head(ready_queue);
-    next_prio = sched_get_dynprio(next);
+    next_prio = sched_get_dn_prio(next);
 
     it = queue_head(ready_queue);
-    current_prio = sched_get_dynprio(it);
+    current_prio = sched_get_dn_prio(it);
 
     while (it != NULL) {
         if (current_prio < next_prio) {
@@ -67,15 +67,15 @@ struct task_t* scheduler(struct queue_t* ready_queue) {
             next_prio = current_prio;
         }
 
-        sched_set_dynprio(it, current_prio + AGING);
+        sched_set_dn_prio(it, current_prio + AGING);
         it = queue_next(ready_queue);
-        current_prio = sched_get_dynprio(it);
+        current_prio = sched_get_dn_prio(it);
     }
 
     ppos_debug("task %d (%s) with prio %d is the next task\n", next->id,
                next->name, next_prio);
 
-    sched_set_dynprio(next, sched_getprio(next));
+    sched_set_dn_prio(next, sched_getprio(next));
 
     return next;
 }

@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,10 +8,10 @@
 // Teste da função task_sleep()
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
-static struct task_t *pang, *peng, *ping, *pong, *pung;
+struct task_t *pang, *peng, *ping, *pong, *pung;
 
 // corpo das tarefas
 void body(void *arg)
@@ -19,38 +19,41 @@ void body(void *arg)
     int i, t_sleep, t_before, t_after;
     char *status;
 
-    printf("%5d ms: %s: inicio\n", systime(), (char *)arg);
+    printk("%5u ms: %s: inicio\n", time(), (char *)arg);
     for (i = 0; i < 20; i++)
     {
         // sorteia tempo entre 0 e 2000 ms (2s), em saltos de 100 ms
         t_sleep = 100 * (randnum() % 21);
 
         // informa o quanto vai dormir
-        printf("%5d ms: %s vai dormir %d ms\n",
-               systime(), (char *)arg, t_sleep);
+        printk("%5u ms: %s vai dormir %d ms\n",
+               time(), (char *)arg, t_sleep);
 
         // registra tempo antes e depois de dormir
-        t_before = systime();
+        t_before = time();
         task_sleep(t_sleep);
-        t_after = systime();
+        t_after = time();
 
         // verifica se dormiu o intervalo especificado
         status = (t_after - t_before) == t_sleep ? "ok" : "ERRADO";
 
         // informa o quanto efetivamente dormiu
-        printf("%5d ms: %s dormiu     %d ms (%s)\n", systime(),
+        printk("%5u ms: %s dormiu     %d ms (%s)\n", time(),
                (char *)arg, t_after - t_before, status);
     }
-    printf("%5d ms: %s: fim\n", systime(), (char *)arg);
-    task_exit(0);
+    printk("%5u ms: %s: fim\n", time(), (char *)arg);
+    task_exit(NOERROR);
 }
 
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status;
+    int status, id;
+    char *name;
 
-    printf("%5d ms: user: inicio\n", systime());
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // cria tarefas
     pang = task_create("pang", body, "\tPang");
@@ -64,33 +67,33 @@ void user_main(void *arg)
     pung = task_create("pung", body, "\t\t\t\t\tPung");
     assert(pung);
 
-    // aguarda tarefas concluirem
-    printf("%5d ms: user: espera Pang...\n", systime());
+    // aguarda tarefas concluírem
+    printk("%5u ms: user: espera Pang...\n", time());
     status = task_wait(pang);
     assert(status == NOERROR);
-    printf("%5d ms: user: Pang acabou\n", systime());
+    printk("%5u ms: user: Pang acabou\n", time());
 
-    printf("%5d ms: user: espera Peng...\n", systime());
+    printk("%5u ms: user: espera Peng...\n", time());
     status = task_wait(peng);
     assert(status == NOERROR);
-    printf("%5d ms: user: Peng acabou\n", systime());
+    printk("%5u ms: user: Peng acabou\n", time());
 
-    printf("%5d ms: user: espera Ping...\n", systime());
+    printk("%5u ms: user: espera Ping...\n", time());
     status = task_wait(ping);
     assert(status == NOERROR);
-    printf("%5d ms: user: Ping acabou\n", systime());
+    printk("%5u ms: user: Ping acabou\n", time());
 
-    printf("%5d ms: user: espera Pong...\n", systime());
+    printk("%5u ms: user: espera Pong...\n", time());
     status = task_wait(pong);
     assert(status == NOERROR);
-    printf("%5d ms: user: Pong acabou\n", systime());
+    printk("%5u ms: user: Pong acabou\n", time());
 
-    printf("%5d ms: user: espera Pung...\n", systime());
+    printk("%5u ms: user: espera Pung...\n", time());
     status = task_wait(pung);
     assert(status == NOERROR);
-    printf("%5d ms: user: Pung acabou\n", systime());
+    printk("%5u ms: user: Pung acabou\n", time());
 
-    // destroi descritores
+    // destrói tarefas
     status = task_destroy(pang);
     assert(status == NOERROR);
     status = task_destroy(peng);
@@ -102,7 +105,7 @@ void user_main(void *arg)
     status = task_destroy(pung);
     assert(status == NOERROR);
 
-    printf("%5d ms: user: fim\n", systime());
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -9,8 +9,8 @@
 // que lê e escreve/altera todos os blocos do disco.
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
 static int num_blk;     // numero de blocos no disco
 static int blk_size;    // tamanho de cada bloco (bytes)
@@ -18,10 +18,13 @@ static int blk_size;    // tamanho de cada bloco (bytes)
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status;
+    int status, id;
+    char *name;
     unsigned char c, *buffer;
 
-    printf("%5d ms: user: inicio\n", systime());
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // busca geometria do disco
     num_blk = block_blocks();
@@ -29,8 +32,8 @@ void user_main(void *arg)
     blk_size = block_size();
     assert(blk_size);
 
-    printf("%5d ms: disco contem %d blocos de %d bytes cada\n",
-           systime(), num_blk, blk_size);
+    printk("%5u ms: disco contem %d blocos de %d bytes cada\n",
+           time(), num_blk, blk_size);
 
     // aloca o buffer para ler blocos do disco
     buffer = mem_alloc(blk_size);
@@ -40,20 +43,20 @@ void user_main(void *arg)
     for (int i = 0; i < num_blk; i++)
     {
         // lê o bloco i do disco no buffer
-        printf("%5d ms: lendo bloco %d\n", systime(), i);
+        printk("%5u ms: lendo bloco %d\n", time(), i);
         status = block_read(i, buffer);
         if (status)
-            printf("Erro ao ler bloco %d!\n", i);
+            printk("Erro ao ler bloco %d!\n", i);
 
         // mostra o conteudo do buffer
-        printf("%5d ms: buffer: [", systime());
+        printk("%5u ms: buffer: [", time());
         for (int j = 0; j < blk_size; j++)
-            printf("%c", buffer[j]);
-        printf("]\n");
+            printk("%c", buffer[j]);
+        printk("]\n");
     }
 
     // inicia gerador de números aleatórios
-    randseed(systime());
+    randseed(time());
 
     // lê e imprime todos os blocos do disco, um a um
     for (int i = 0; i < num_blk; i++)
@@ -65,17 +68,17 @@ void user_main(void *arg)
             buffer[j] = c;
 
         // escreve o buffer no bloco i do disco
-        printf("%5d ms: escrevendo bloco %d com caracteres \"%c\"\n",
-               systime(), i, c);
+        printk("%5u ms: escrevendo bloco %d com caracteres \"%c\"\n",
+               time(), i, c);
         status = block_write(i, buffer);
         if (status)
-            printf("Erro ao escrever bloco %d!\n", i);
+            printk("Erro ao escrever bloco %d!\n", i);
     }
 
     // libera o buffer de blocos do disco
     mem_free(buffer);
 
-    printf("%5d ms: user fim\n", systime());
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

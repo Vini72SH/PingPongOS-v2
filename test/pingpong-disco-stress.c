@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -9,27 +9,27 @@
 // fazendo operações de leitura e escrita simultâneas.
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
 #define NUMTASKS 8
 
 // tarefas
-static struct task_t *mover[NUMTASKS]; // tarefas movedoras de blocos
-static int num_blk;                    // numero de blocos no disco
-static int blk_size;                   // tamanho de cada bloco (bytes)
+struct task_t *mover[NUMTASKS];     // tarefas movedoras de blocos
+static int num_blk;             // numero de blocos no disco
+static int blk_size;            // tamanho de cada bloco (bytes)
 
 // lê um bloco do disco
 void le_bloco(int task, int block, char *buffer)
 {
     int status;
 
-    printf("%5d ms: T%-2d lendo bloco %3d\n", systime(), task, block);
+    printk("%5u ms: T%-2d lendo bloco %3d\n", time(), task, block);
     status = block_read(block, buffer);
     if (status == 0)
-        printf("%5d ms: T%-2d leu   bloco %3d\n", systime(), task, block);
+        printk("%5u ms: T%-2d leu   bloco %3d\n", time(), task, block);
     else
-        printf("%5d ms: T%-2d erro ao ler bloco %3d\n", systime(), task, block);
+        printk("%5u ms: T%-2d erro ao ler bloco %3d\n", time(), task, block);
 }
 
 // escreve um bloco no disco
@@ -37,22 +37,22 @@ void escreve_bloco(int task, int block, char *buffer)
 {
     int status;
 
-    printf("%5d ms: T%-2d escrevendo bloco %3d\n", systime(), task, block);
+    printk("%5u ms: T%-2d escrevendo bloco %3d\n", time(), task, block);
     status = block_write(block, buffer);
     if (status == 0)
-        printf("%5d ms: T%-2d escreveu   bloco %3d\n", systime(), task, block);
+        printk("%5u ms: T%-2d escreveu   bloco %3d\n", time(), task, block);
     else
-        printf("%5d ms: T%-2d erro ao escrever bloco %3d\n",
-               systime(), task, block);
+        printk("%5u ms: T%-2d erro ao escrever bloco %3d\n",
+               time(), task, block);
 }
 
 // mostra o conteudo do bloco
 void mostra_bloco(int task, int block, char *buffer)
 {
-    printf("%5d ms: T%-2d bloco %3d tem: [", systime(), task, block);
+    printk("%5u ms: T%-2d bloco %3d tem: [", time(), task, block);
     for (int j = 0; j < blk_size; j++)
-        printf("%c", buffer[j]);
-    printf("]\n");
+        printk("%c", buffer[j]);
+    printk("]\n");
 }
 
 // corpo das tarefas "mover"
@@ -76,8 +76,8 @@ void body(void *arg)
     blk_orig = my_id * blk_per_task;
     blk_dest = num_blk - 1 - (my_id * blk_per_task);
 
-    printf("%5d ms: T%-2d movendo %2d blocos entre blocos %3d e %3d\n",
-           systime(), tid, blk_per_task, blk_orig, blk_dest);
+    printk("%5u ms: T%-2d movendo %2d blocos entre blocos %3d e %3d\n",
+           time(), tid, blk_per_task, blk_orig, blk_dest);
 
     // move blk_per_task blocos
     for (int i = 0; i < blk_per_task; i++)
@@ -98,19 +98,22 @@ void body(void *arg)
         blk_orig++;
         blk_dest--;
     }
-    printf("%5d ms: T%-2d terminou\n", systime(), tid);
+    printk("%5u ms: T%-2d terminou\n", time(), tid);
 
     mem_free(buf1);
     mem_free(buf2);
-    task_exit(0);
+    task_exit(NOERROR);
 }
 
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status;
+    int status, id;
+    char *name;
 
-    printf("user: inicio\n");
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // busca geometria do disco
     num_blk = block_blocks();
@@ -118,8 +121,8 @@ void user_main(void *arg)
     blk_size = block_size();
     assert(blk_size);
 
-    printf("%5d ms: disco contem %d blocos de %d bytes cada\n",
-           systime(), num_blk, blk_size);
+    printk("%5u ms: disco contem %d blocos de %d bytes cada\n",
+           time(), num_blk, blk_size);
 
     // cria as tarefas
     for (long i = 0; i < NUMTASKS; i++)
@@ -135,14 +138,14 @@ void user_main(void *arg)
         assert(status == NOERROR);
     }
 
-    // destroi os descritores
+    // destrói as tarefas
     for (int i = 0; i < NUMTASKS; i++)
     {
         status = task_destroy(mover[i]);
         assert(status == NOERROR);
     }
 
-    printf("user: fim\n");
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

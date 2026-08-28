@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,13 +8,13 @@
 // Teste da função task_wait() com muitas tarefas
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
 #define WORKLOAD 3000
 #define NUMTASKS 512
 
-static struct task_t *task[NUMTASKS];
+struct task_t *task[NUMTASKS];
 
 // simula um processamento pesado
 int hardwork(int n)
@@ -30,24 +30,28 @@ int hardwork(int n)
 // corpo das tarefas
 void body()
 {
-    int max = 1 + randnum() % 5 ;
-    
+    int tid = task_id(NULL);
+    int max = 1 + randnum() % 5;
+
     for (int i = 0; i < max; i++)
         hardwork(WORKLOAD + randnum() % WORKLOAD);
 
-    printf("task %3d: fim\n", task_id(NULL));
-    task_exit(task_id(NULL));
+    printk("task %3d: fim\n", tid);
+    task_exit(tid);
 }
 
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status, exit_code;
+    int status, id;
+    char *name;
 
-    printf("user: inicio\n");
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // cria tarefas
-    printf("Creating %d tasks\n", NUMTASKS);
+    printk("Creating %d tasks\n", NUMTASKS);
     for (int i = 0; i < NUMTASKS; i++)
     {
         task[i] = task_create(NULL, body, NULL);
@@ -57,19 +61,19 @@ void user_main(void *arg)
     // espera tarefas encerrarem
     for (int i = 0; i < NUMTASKS; i++)
     {
-        printf("Waiting for task %d\n", task_id(task[i]));
-        exit_code = task_wait(task[i]);
-        assert(exit_code == task_id(task[i]));
+        printk("Waiting for task %d to finish\n", task_id(task[i]));
+        status = task_wait(task[i]);
+        assert(status == task_id(task[i]));
     }
 
-    // destroi descritores
+    // destrói as tarefas
     for (int i = 0; i < NUMTASKS; i++)
     {
         status = task_destroy(task[i]);
         assert(status == NOERROR);
     }
 
-    printf("user: fim\n");
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -29,8 +29,8 @@
 
 // parâmetros de operação do disco simulado
 #define DISK_BLOCK_SIZE 64   // tamanho de cada bloco, em bytes
-#define DISK_DELAY_MIN 30    // atraso minimo, em milisegundos
-#define DISK_DELAY_MAX 300   // atraso maximo, em milisegundos
+#define DISK_DELAY_MIN 30    // atraso mínimo, em milissegundos
+#define DISK_DELAY_MAX 300   // atraso máximo, em milissegundos
 #define DISK_SIGNAL SIGRTMIN // sinal a ser usado no timer interno
 
 //----------------------------------------------------------------------
@@ -47,6 +47,8 @@ struct disk_t
     int prev_block;           // bloco da ultima operação
     int next_block;           // bloco da próxima operação
     int delay_min, delay_max; // tempos de acesso mínimo e máximo
+    int count_read,           // contador de leituras
+        count_write;          // contador de escritas
     timer_t timer;            // timer que simula o tempo de acesso
     struct itimerspec delay;  // struct do timer de tempo de acesso
     struct sigevent sigev;    // evento associado ao timer
@@ -65,7 +67,7 @@ static void disk_settimer()
     int time_ms;
 
     // tempo no intervalo [DISK_DELAY_MIN ... DISK_DELAY_MAX], proporcional a
-    // distancia entre o proximo bloco a ler (next_block) e a ultima leitura
+    // distancia entre o próximo bloco a ler (next_block) e a ultima leitura
     // (prev_block), somado a um pequeno fator aleatorio
     time_ms = abs(disk.next_block - disk.prev_block) *
                   (disk.delay_max - disk.delay_min) /
@@ -73,18 +75,18 @@ static void disk_settimer()
               disk.delay_min +
               random() % (disk.delay_max - disk.delay_min) / 10;
 
-#ifdef DEBUG_DISK
+    #ifdef DEBUG_DISK
     printf("DISK: [From block %d to block %d in %d ms]\n",
                    disk.prev_block, disk.next_block, time_ms);
-#endif
+    #endif
 
-    // primeiro disparo, em nano-segundos,
+    // primeiro disparo, em nanossegundos,
     disk.delay.it_value.tv_nsec = time_ms * 1000000;
 
     // primeiro disparo, em segundos
     disk.delay.it_value.tv_sec = time_ms / 1000;
 
-    // próximos disparos nao ocorrem (disparo único)
+    // próximos disparos não ocorrem (disparo único)
     disk.delay.it_interval.tv_nsec = 0;
     disk.delay.it_interval.tv_sec = 0;
 
@@ -94,9 +96,9 @@ static void disk_settimer()
         perror("DISK:");
         abort();
     }
-#ifdef DEBUG_DISK
+    #ifdef DEBUG_DISK
     printf("DISK: timer is set\n");
-#endif
+    #endif
 }
 
 //----------------------------------------------------------------------
@@ -104,25 +106,27 @@ static void disk_settimer()
 // trata o sinal do timer que simula o tempo de acesso ao disco
 static void disk_sighandle(int)
 {
-#ifdef DEBUG_DISK
+    #ifdef DEBUG_DISK
     printf("DISK: signal received\n");
     printf("fd: %d, block %d, size %d\n", disk.fd, disk.next_block,
            disk.blocksize);
-#endif
+    #endif
 
     // verificar qual a operação pendente e realizá-la
     switch (disk.status)
     {
     case DISK_STATUS_READ:
         // faz a leitura previamente agendada
-        pread(disk.fd, disk.buffer, disk.blocksize, 
+        pread(disk.fd, disk.buffer, disk.blocksize,
               disk.next_block * disk.blocksize);
+        disk.count_read++;
         break;
 
     case DISK_STATUS_WRITE:
         // faz a escrita previamente agendada
-        pwrite(disk.fd, disk.buffer, disk.blocksize, 
+        pwrite(disk.fd, disk.buffer, disk.blocksize,
               disk.next_block * disk.blocksize);
+        disk.count_write++;
         break;
 
     default:
@@ -155,7 +159,7 @@ static int disk_init(char *disk_image)
     disk.status = DISK_STATUS_IDLE;
     disk.next_block = disk.prev_block = 0;
 
-    // abre o arquivo no disco (leitura/escrita, sincrono)
+    // abre o arquivo no disco (leitura/escrita, síncrono)
     disk.file = disk_image;
     disk.fd = open(disk.file, O_RDWR | O_SYNC);
     if (disk.fd < 0)
@@ -172,6 +176,10 @@ static int disk_init(char *disk_image)
     disk.delay_min = DISK_DELAY_MIN;
     disk.delay_max = DISK_DELAY_MAX;
 
+    // contadores de operações
+    disk.count_read  = 0;
+    disk.count_write = 0;
+
     // associa sinal do timer interno ao handle apropriado
     disk.signal.sa_handler = disk_sighandle;
     sigemptyset(&disk.signal.sa_mask);
@@ -187,9 +195,9 @@ static int disk_init(char *disk_image)
         abort();
     }
 
-#ifdef DEBUG_DISK
+    #ifdef DEBUG_DISK
     printf("DISK: initialized\n");
-#endif
+    #endif
 
     return (NOERROR);
 }
@@ -197,11 +205,11 @@ static int disk_init(char *disk_image)
 //----------------------------------------------------------------------
 
 // função que implementa a interface de acesso ao disco virtual
-int hw_disk_cmd(int cmd, int block, void *buffer)
+int hw_disk(int cmd, int block, void *buffer)
 {
-#ifdef DEBUG_DISK
+    #ifdef DEBUG_DISK
     printf("DISK: received command %d\n", cmd);
-#endif
+    #endif
 
     switch (cmd)
     {
@@ -236,6 +244,18 @@ int hw_disk_cmd(int cmd, int block, void *buffer)
         if (disk.status == DISK_STATUS_UNKNOWN)
             return (ERROR);
         return (disk.delay_max);
+
+    // solicita contador de leituras
+    case DISK_CMD_COUNTREAD:
+        if (disk.status == DISK_STATUS_UNKNOWN)
+            return (ERROR);
+        return (disk.count_read);
+
+    // solicita contador de escritas
+    case DISK_CMD_COUNTWRITE:
+        if (disk.status == DISK_STATUS_UNKNOWN)
+            return (ERROR);
+        return (disk.count_write);
 
     // solicita operação de leitura ou de escrita
     case DISK_CMD_READ:

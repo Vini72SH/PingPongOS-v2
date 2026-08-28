@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,14 +8,14 @@
 // Teste de semáforos (stress)
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
 #define NUMTASKS 64
 #define NUMSTEPS 1000000
 
-static struct task_t *task[NUMTASKS];
-static struct semaphore_t *s;
+struct task_t *task[NUMTASKS];
+int s;
 static int soma = 0;
 
 // corpo das tarefas
@@ -37,21 +37,24 @@ void body()
             break;
     }
 
-    task_exit(0);
+    task_exit(NOERROR);
 }
 
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int status;
+    int status, id;
+    char *name;
 
-    printf("user: inicio\n");
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // inicia semáforo em 0 (bloqueado)
     s = sem_create(0);
-    assert(s);
+    assert(s >= 0);
 
-    printf("%d tarefas somando %d vezes cada, aguarde...\n",
+    printk("%d tarefas somando %d vezes cada, aguarde...\n",
            NUMTASKS, NUMSTEPS);
 
     // cria tarefas
@@ -75,25 +78,25 @@ void user_main(void *arg)
         assert(status == NOERROR);
     }
 
-    // destroi o semáforo
+    // verifica se a soma está correta
+    if (soma == (NUMTASKS * NUMSTEPS))
+        printk("A soma deu %d, valor correto!\n", soma);
+    else
+        printk("A soma deu %d, mas deveria dar %d!\n",
+               soma, NUMTASKS * NUMSTEPS);
+
+    // destrói o semáforo
     status = sem_destroy(s);
     assert(status == NOERROR);
 
-    // verifica se a soma está correta
-    if (soma == (NUMTASKS * NUMSTEPS))
-        printf("A soma deu %d, valor correto!\n", soma);
-    else
-        printf("A soma deu %d, mas deveria dar %d!\n",
-               soma, NUMTASKS * NUMSTEPS);
-
-    // destroi os descritores
+    // destrói as tarefas
     for (int i = 0; i < NUMTASKS; i++)
     {
         status = task_destroy(task[i]);
         assert(status == NOERROR);
     }
 
-    printf("user: fim\n");
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

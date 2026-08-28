@@ -1,23 +1,24 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
 
-// Funções básicas/iniciais do PPOS
-
-#include "ppos.h"
+// Funções iniciais do PPOS
 
 #include "hardware/cpu.h"
-#include "lib/libc.h"
+#include "lib/pplibc.h"
+#include "ppos.h"
 
 //----------------------------------------------------------------------
 
-static void ppos_start() {
-    printf("PPOS: system starting\n");
+// Inicia o sistema operacional
+static void ppos_init()
+{
+    printk("PPOS: system initializing\n");
 
-    // inicia os vários subsistemas
+    // inicia os subsistemas
     mem_init();
     task_init();
     dispatcher_init();
@@ -27,33 +28,36 @@ static void ppos_start() {
     mqueue_init();
     block_init("hardware/disk.dat");
 
-    printf("PPOS: system started (uptime %d ms)\n", systime());
+    printk("PPOS: system ready (uptime %u ms)\n", time());
 }
 
 //----------------------------------------------------------------------
 
-void ppos_stop() {
-    printf("PPOS: system stopping\n", systime());
+// Encerra o sistema operacional
+void ppos_term()
+{
+    printk("PPOS: system terminating\n", time());
 
-    // encerra os vários subsistemas (em ordem contrária ao init)
-    // block_stop("hardware/disk.dat");
-    // mqueue_stop();
-    // sem_stop();
-    // time_stop();
-    // sched_stop();
-    // dispatcher_stop();
-    // task_stop();
-    // mem_stop();
+    // encerra os subsistemas (em ordem contrária ao ppos_init)
+    block_term("hardware/disk.dat");
+    mqueue_term();
+    sem_term();
+    time_term();
+    sched_term();
+    dispatcher_term();
+    task_term();
+    mem_term();
 
-    printf("PPOS: system stopped (uptime %d ms)\n", systime());
+    printk("PPOS: system terminated (uptime %u ms)\n", time());
 }
 
 //----------------------------------------------------------------------
 
-int main() {
-    ppos_start();
+int main()
+{
+    ppos_init();
     dispatcher();
-    ppos_stop();
+    ppos_term();
     hw_poweroff(0);
 }
 

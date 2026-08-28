@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,12 +8,12 @@
 // Teste da função task_wait() (leve)
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
 #define WORKLOAD 20000
 
-static struct task_t *pang, *peng, *ping, *pong, *pung;
+struct task_t *pang, *peng, *ping, *pong, *pung;
 
 // simula um processamento pesado
 int hardwork(int n)
@@ -34,13 +34,13 @@ void body(void *arg)
     tid = task_id(NULL);
     max = tid * 2;
 
-    printf("%5d ms: %s inicia\n", systime(), (char *)arg);
+    printk("%5u ms: %s inicia\n", time(), (char *)arg);
     for (int i = 0; i < max; i++)
     {
-        printf("%5d ms: %s %d\n", systime(), (char *)arg, i);
+        printk("%5u ms: %s %d\n", time(), (char *)arg, i);
         hardwork(WORKLOAD);
     }
-    printf("%5d ms: %s termina\n", systime(), (char *)arg);
+    printk("%5u ms: %s termina\n", time(), (char *)arg);
 
     task_exit(tid);
 }
@@ -48,9 +48,12 @@ void body(void *arg)
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    int exit_code, status;
+    int status, id;
+    char *name;
 
-    printf("user: inicio\n");
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     pang = task_create("pang", body, "\tPang");
     assert(pang);
@@ -65,30 +68,31 @@ void user_main(void *arg)
 
     for (int i = 0; i < 2; i++)
     {
-        printf("%5d ms: user %d\n", systime(), i);
+        printk("%5u ms: %s %d\n", time(), name, i);
         hardwork(WORKLOAD);
     }
 
-    printf("%5d ms: user esperando Pang...\n", systime());
-    exit_code = task_wait(pang);
-    assert(exit_code == task_id(pang));
+    printk("%5u ms: %s esperando Pang...\n", time(), name);
+    status = task_wait(pang);
+    assert(status == task_id(pang));
 
-    printf("%5d ms: user esperando Peng...\n", systime());
-    exit_code = task_wait(peng);
-    assert(exit_code == task_id(peng));
+    printk("%5u ms: %s esperando Peng...\n", time(), name);
+    status = task_wait(peng);
+    assert(status == task_id(peng));
 
-    printf("%5d ms: user esperando Ping...\n", systime());
-    exit_code = task_wait(ping);
-    assert(exit_code == task_id(ping));
+    printk("%5u ms: %s esperando Ping...\n", time(), name);
+    status = task_wait(ping);
+    assert(status == task_id(ping));
 
-    printf("%5d ms: user esperando Pong...\n", systime());
-    exit_code = task_wait(pong);
-    assert(exit_code == task_id(pong));
+    printk("%5u ms: %s esperando Pong...\n", time(), name);
+    status = task_wait(pong);
+    assert(status == task_id(pong));
 
-    printf("%5d ms: user esperando Pung...\n", systime());
-    exit_code = task_wait(pung);
-    assert(exit_code == task_id(pung));
+    printk("%5u ms: %s esperando Pung...\n", time(), name);
+    status = task_wait(pung);
+    assert(status == task_id(pung));
 
+    // destrói as tarefas
     status = task_destroy(pang);
     assert(status == NOERROR);
     status = task_destroy(peng);
@@ -100,7 +104,7 @@ void user_main(void *arg)
     status = task_destroy(pung);
     assert(status == NOERROR);
 
-    printf("%5d ms: user termina\n", systime());
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

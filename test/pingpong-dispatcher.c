@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 07/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -8,28 +8,35 @@
 // Teste do dispatcher com escalonador FCFS
 
 #include <assert.h>
-#include "lib/libc.h"
-#include "ppos.h"
+#include "lib/pplibc.h"
+#include "syscall.h"
 
-static struct task_t *pang, *peng, *ping, *pong, *pung;
+struct task_t *pang, *peng, *ping, *pong, *pung;
 
 // corpo das tarefas
 void body(void *arg)
 {
-    printf("%s: inicio\n", (char *)arg);
+    printk("%s (id %d): inicio\n",
+           (char *)arg, task_id(NULL));
+
     for (int i = 0; i < 5; i++)
     {
-        printf("%s: %d\n", (char *)arg, i);
+        printk("%s: %d\n", (char *)arg, i);
         task_yield();
     }
-    printf("%s: fim\n", (char *)arg);
-    task_exit(0);
+    printk("%s: fim\n", (char *)arg);
+    task_exit(NOERROR);
 }
 
 // corpo da tarefa principal
 void user_main(void *arg)
 {
-    printf("user: criando as tarefas\n");
+    int id;
+    char *name;
+
+    name = task_name(NULL);
+    id   = task_id(NULL);
+    printk("%5u ms: %s (id %d): inicio\n", time(), name, id);
 
     // cria tarefas
     pang = task_create("pang", body, "\tPang");
@@ -43,7 +50,7 @@ void user_main(void *arg)
     pung = task_create("pung", body, "\t\t\t\t\tPung");
     assert(pung);
 
-    printf("user: fim\n");
+    printk("%5u ms: %s fim\n", time(), name);
 
-    task_exit(0);
+    task_exit(NOERROR);
 }

@@ -1,6 +1,6 @@
 // PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 2.0 -- Junho de 2025
+// © Prof. Carlos A. Maziero, DINF UFPR
+// Versão 2.1 -- 06/2026
 
 // ATENÇÃO: ESTE ARQUIVO NÃO DEVE SER ALTERADO;
 // ALTERAÇÕES SERÃO DESCARTADAS NA CORREÇÃO.
@@ -10,13 +10,18 @@
 #ifndef __PPOS_TIME__
 #define __PPOS_TIME__
 
-// duracao default do quantum em ticks (ms)
-#define QUANTUM 10
+#define TICK     1   // duração do tick em milissegundos
+#define QUANTUM 10   // duracao default do quantum em ticks
 
 // inicia o subsistema de gestão do tempo
+// (chamada pelo núcleo na inicialização).
 void time_init();
 
+// encerra o subsistema de gestão do tempo
+// (chamada pelo núcleo no encerramento).
+void time_term();
+
 // informa o valor atual do relógio (milissegundos)
-int systime();
+unsigned int time();
 
 #endif

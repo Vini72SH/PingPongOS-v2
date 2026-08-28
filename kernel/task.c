@@ -1,55 +1,57 @@
 // PingPongOS - PingPong Operating System
 
+// Gerência básica de tarefas.
 #include <valgrind/valgrind.h>
 
+#include "kernel/dispatcher.h"
+#include "kernel/macros.h"
+#include "kernel/memory.h"
+#include "kernel/tcb.h"
+#include "kernel/time.h"
 #include "lib/queue.h"
-#include "macros.h"
-#include "memory.h"
-#include "tcb.h"
-#include "time.h"
 
-#define STACKSIZE 16384
-
-extern void (*user_main)(void* args);
+const int STACKSIZE = 16384;
 
 long int uid = 1;
+
 struct task_t kernel_task = {0};
 struct task_t* current_task = NULL;
 
-extern struct queue_t* ready;
+extern struct queue_t* ready_tasks;
+extern struct queue_t* sleeping_tasks;
 
-/*
- * Esta função é chamada por ppos.c:ppos_init e inicia as variáveis necessárias
- * à gestão de tarefas. Neste momento, sua principal responsabilidade é definir
- * uma tarefa para o fluxo de execução do núcleo, que pode ser chamada de
- * task_kernel, com nome “kernel” e ID 0. Essa tarefa pode ser vista como o
- * equivalente da função main no programa contexts.c do projeto anterior. A
- * tarefa do núcleo não deve ser criada com task_create, pois não usa uma pilha
- * separada nem uma função separada.
- */
+// inicializa o subsistema de tarefas.
+// (chamada pelo núcleo na inicialização).
 void task_init() {
     kernel_task.id = 0;
     kernel_task.name = "kernel";
     kernel_task.status = RUNNING;
     kernel_task.creator = NULL;
+    kernel_task.vg_id = 0;
     kernel_task.st_prio = 0;
     kernel_task.dn_prio = 0;
-    kernel_task.quantum = QUANTUM;
-    kernel_task.lifetime = systime();
+    kernel_task.quantum = 0;
+    kernel_task.lifetime = time();
     kernel_task.cputime = 0;
     kernel_task.activations = 1;
-    kernel_task.wakeup = 0;
+    kernel_task.exit_code = 0;
     kernel_task.type = KERNEL;
+    kernel_task.waking_up_in = 0;
+    kernel_task.current_queue = NULL;
+    kernel_task.waiting = NULL;
     current_task = &kernel_task;
-    kernel_task.waiting = queue_create();
 
     ppos_debug("subsystem task initiated\n");
 }
 
-// cria uma nova tarefa: "name" é o nome da tarefa, "entry"
-// é a função que ela irá executar e "arg" aponta para o valor
-// recebido por "entry" ao iniciar (pode ser NULL).
-// retorno: ptr para o descritor da tarefa ou NULL se houver erro
+// encerra o subsistema de tarefas.
+// (chamada pelo núcleo no encerramento).
+void task_term() {}
+
+// cria uma nova tarefa: "name" é o nome da tarefa, "entry" é a função que
+// ela irá executar e "arg" aponta para o valor recebido por "entry" ao
+// iniciar (pode ser NULL).
+// Retorno: ptr para a tarefa ou NULL se houver erro.
 struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     struct task_t* new_task;
 
@@ -65,30 +67,32 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     new_task->id = uid++;
     new_task->name = name;
     new_task->stack = stack;
+
+    new_task->vg_id =
+        VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);
+
     if (ctx_create(&new_task->context, entry, arg, new_task->stack,
                    STACKSIZE) != NOERROR) {
         mem_free(new_task->stack);
         mem_free(new_task);
         return NULL;
     }
+
     new_task->creator = current_task;
     new_task->status = READY;
-    new_task->exit_code = 0;
     new_task->st_prio = 0;
     new_task->dn_prio = 0;
     new_task->quantum = QUANTUM;
-    new_task->lifetime = systime();
+    new_task->type = USER;
+    new_task->lifetime = time();
     new_task->cputime = 0;
     new_task->activations = 0;
-    new_task->wakeup = 0;
-    new_task->type = USER;
-
-    new_task->vg_id =
-        VALGRIND_STACK_REGISTER(new_task->stack, new_task->stack + STACKSIZE);
-
+    new_task->exit_code = 0;
+    new_task->waking_up_in = 0;
+    new_task->current_queue = NULL;
     new_task->waiting = queue_create();
 
-    if (queue_add(ready, new_task) != NOERROR) {
+    if (queue_add(ready_tasks, new_task) != NOERROR) {
         VALGRIND_STACK_DEREGISTER(new_task->vg_id);
         mem_free(new_task->stack);
         mem_free(new_task);
@@ -101,61 +105,81 @@ struct task_t* task_create(char* name, void (*entry)(void*), void* arg) {
     return new_task;
 }
 
-// destroi uma tarefa e libera seus recursos;
-// somente deve atuar sobre tarefas terminadas.
-// Retorno: NOERROR (0) ou ERROR (<0)
+// destrói uma tarefa e libera seus recursos; somente deve atuar sobre tarefas
+// terminadas. Retorno: NOERROR (0) ou ERROR (<0).
 int task_destroy(struct task_t* task) {
-    if (task == NULL) return NOERROR;
+    if (task == NULL) return ERROR;
     if (task->status != FINISHED) return ERROR;
 
-    VALGRIND_STACK_DEREGISTER(task->vg_id);
-    task->vg_id = 0;
-
-    ppos_debug("task %d (%s) destroy task %d (%s)\n", current_task->id,
-               current_task->name, task->id, task->name);
-
     queue_destroy(task->waiting);
+
+    VALGRIND_STACK_DEREGISTER(task->vg_id);
     mem_free(task->stack);
     mem_free(task);
-
-    task = NULL;
-
     return NOERROR;
 }
 
-// transfere a cpu da tarefa atual para outra tarefa;
-// se task == NULL, transfere para a tarefa que a criou.
-// ignora sem erro se "task" já tiver terminado.
-// Retorno: NOERROR (0) ou ERROR (<0)
-int task_switch(struct task_t* task) {
-    struct task_t* running_task = current_task;
-    struct task_t* next_task;
-
-    if (task != NULL)
-        next_task = task;
-    else
-        next_task = current_task->creator;
-
-    current_task = next_task;
-
-    ppos_debug("task %d (%s) switch to task %d (%s)\n", running_task->id,
-               running_task->name, next_task->id, next_task->name);
-
-    next_task->activations++;
-    next_task->status = RUNNING;
-    return ctx_swap(&running_task->context, &next_task->context);
-}
-
-// informa o ID de uma tarefa (ou da tarefa atual se NULL)
+// informa o ID de uma tarefa (ou da tarefa atual se task == NULL)
 int task_id(struct task_t* task) {
-    if (task != NULL) return task->id;
-
-    return current_task->id;
+    if (task == NULL) return current_task->id;
+    return task->id;
 }
 
-// informa o nome de uma tarefa (ou da tarefa atual se NULL)
+// informa o nome de uma tarefa (ou da tarefa atual se task == NULL)
 char* task_name(struct task_t* task) {
-    if (task != NULL) return task->name;
+    if (task == NULL) return current_task->name;
+    return task->name;
+}
 
-    return current_task->name;
+// a tarefa atual libera a CPU e volta para a fila de prontas; a execução
+// retorna ao núcleo/dispatcher.
+void task_yield() {
+    current_task->status = READY;
+    current_task->quantum = QUANTUM;
+    current_task->current_queue = ready_tasks;
+    queue_add(ready_tasks, current_task);
+    task_switch(&kernel_task);
+}
+
+// suspende a tarefa atual até que a tarefa task termine; a execução retorna
+// ao núcleo/dispatcher. Se a tarefa task já terminou, retorna sem suspender.
+// Retorno: exit code tarefa que terminou ou ERROR.
+int task_wait(struct task_t* task) {
+    if (task == NULL) return ERROR;
+    if (task->status == FINISHED) return task->exit_code;
+
+    task_suspend(task->waiting);
+
+    return task->exit_code;
+}
+
+// suspende a tarefa atual por t milissegundos; a execução retorna ao
+// núcleo/dispatcher.
+void task_sleep(int t) {
+    if (current_task != NULL) {
+        current_task->waking_up_in = time() + t;
+        task_suspend(sleeping_tasks);
+    }
+}
+
+// encerra a execução da tarefa atual, informando um código de encerramento
+// (exit_code); a execução retorna ao núcleo/dispatcher.
+void task_exit(int exit_code) {
+    if (current_task != NULL) {
+        current_task->status = FINISHED;
+        current_task->lifetime = time() - current_task->lifetime;
+        current_task->exit_code = exit_code;
+
+        queue_del(current_task->current_queue, current_task);
+
+        struct task_t* aux;
+        aux = queue_head(current_task->waiting);
+        while (aux != NULL) {
+            task_awake(aux);
+            queue_del(current_task->waiting, aux);
+            aux = queue_head(current_task->waiting);
+        }
+
+        task_switch(&kernel_task);
+    }
 }
