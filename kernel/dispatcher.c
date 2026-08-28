@@ -63,7 +63,8 @@ int task_switch(struct task_t* task) {
     current_task = next_task;
     next_task->activations++;
 
-    return ctx_switch(&running_task->context, &next_task->context);
+    int status = ctx_switch(&running_task->context, &next_task->context);
+    return status;
 }
 
 // executa a tarefa indicada: retira-a da fila de prontas, muda seu status

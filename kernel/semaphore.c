@@ -11,6 +11,9 @@
 #include "lib/map.h"
 #include "lib/queue.h"
 
+extern struct task_t kernel_task;
+extern struct task_t* current_task;
+
 const int NUM_SEMAPHORES = 32;
 
 struct semaphore_t {
@@ -76,14 +79,24 @@ int sem_down(int sem_id) {
     struct semaphore_t* sem = map_get(semaphores, sem_id);
     if (sem == NULL) return ERROR;
 
-    int suspend = 0;
-
+    hw_irq_enable(0);
     spin_lock(&sem->lock);
-    sem->value--;
-    if (sem->value < 0) suspend = 1;
-    spin_unlock(&sem->lock);
 
-    if (suspend) task_suspend(sem->tasks);
+    sem->value--;
+    if (sem->value < 0) {
+        current_task->status = SUSPENDED;
+        current_task->current_queue = sem->tasks;
+        queue_add(sem->tasks, current_task);
+        spin_unlock(&sem->lock);
+        hw_irq_enable(1);
+        task_switch(&kernel_task);
+    } else {
+        spin_unlock(&sem->lock);
+        hw_irq_enable(1);
+    }
+
+    sem = map_get(semaphores, sem_id);
+    if (sem == NULL) return ERROR;
 
     return NOERROR;
 }
@@ -96,14 +109,15 @@ int sem_up(int sem_id) {
 
     struct task_t* task = NULL;
 
+    hw_irq_enable(0);
     spin_lock(&sem->lock);
     sem->value++;
     if (sem->value <= 0) {
         task = queue_head(sem->tasks);
-        queue_del(sem->tasks, task);
-        task_awake(task);
+        if (task != NULL) task_awake(task);
     }
     spin_unlock(&sem->lock);
+    hw_irq_enable(1);
 
     return NOERROR;
 }
