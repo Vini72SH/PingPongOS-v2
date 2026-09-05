@@ -25,7 +25,10 @@ struct semaphore_t {
 
 struct map_t* semaphores = NULL;
 
-void sem_init() { semaphores = map_create(NUM_SEMAPHORES); }
+void sem_init() {
+    semaphores = map_create(NUM_SEMAPHORES);
+    ppos_debug("subsystem semaphores initiated\n");
+}
 
 void sem_term() { map_destroy(semaphores); }
 
