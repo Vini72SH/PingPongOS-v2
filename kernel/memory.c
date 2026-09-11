@@ -6,7 +6,9 @@
 
 // somente para a implementação trivial
 #include <stdlib.h>
+#include <string.h>
 
+#define ERROR -1
 #define NOERROR 0
 
 #define HEAP_SIZE 64 * 1024 * 1024  // 64MB
@@ -42,7 +44,7 @@ void mem_init() {
     initial_block.size = HEAP_SIZE - sizeof(heap_block);
     initial_block.prev = NULL;
     initial_block.next = NULL;
-    initial_block.ptr = (char)heap + (char)(sizeof(heap_block));
+    initial_block.ptr = (char*)heap + (sizeof(heap_block));
 
     free_blocks = 1;
     allocated_blocks = 0;
@@ -54,7 +56,7 @@ void mem_init() {
 
 // encerra o subsistema de memória RAM (heap)
 // (chamada pelo núcleo no encerramento).
-void mem_term();
+void mem_term() {}
 
 // informa a quantidade de memória total, em bytes
 int mem_size() { return HEAP_SIZE; }
@@ -67,9 +69,9 @@ int mem_avail() { return current_space; }
 void* mem_alloc(int size) {
     unsigned int block_size = size;
 
-    while (block_size % 16) block_size++;
+    block_size += (size) % ALIGNMENT;
 
-    heap_block* block = heap;
+    heap_block* block = (heap_block*)heap;
     while (block != NULL) {
         if (block->free && block->size >= block_size) break;
         block = block->next;
@@ -81,13 +83,13 @@ void* mem_alloc(int size) {
     if (block->size >= block_size + sizeof(heap_block) + ALIGNMENT) {
         heap_block* next;
 
-        next = block->ptr + (char)block_size;
-        next->id = id++;
+        next = (heap_block*)((void*)block->ptr + (char)block_size);
+        next->id = bid++;
         next->free = 1;
         next->prev = block;
         next->next = block->next;
         next->size = block->size - (block_size + sizeof(heap_block));
-        next->ptr = &next + (char)sizeof(heap_block);
+        next->ptr = (void*)(&next) + (char)sizeof(heap_block);
         block->size = block_size;
         current_space -= sizeof(heap_block);
         free_blocks++;
@@ -102,11 +104,11 @@ void* mem_alloc(int size) {
 
 // libera um bloco de memória previamente alocado
 // retorna NOERROR se ok ou ERROR se ptr for NULL ou inválido
-int mem_free(void* ptr) {
+int mem_free(void* ptr) { return NOERROR;
     if (ptr == NULL) return ERROR;
     free(ptr);
     return (NOERROR);
 }
 
 // gera um relatório sobre o uso da memória
-void mem_report();
+void mem_report() {}
