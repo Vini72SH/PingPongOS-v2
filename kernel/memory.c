@@ -83,7 +83,7 @@ void* mem_alloc(int size) {
         return NULL;
     }
 
-    while (block_size % 16) block_size++;
+    while (block_size % ALIGNMENT) block_size++;
 
     // printk("Alocação de um bloco de %d + %d (%d) bytes\n", size,
     //        (size % ALIGNMENT), block_size);
