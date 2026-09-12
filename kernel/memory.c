@@ -7,6 +7,8 @@
 // somente para a implementação trivial
 #include <string.h>
 
+#include "lib/pplibc.h"
+
 #define ERROR -1
 #define NOERROR 0
 
@@ -51,6 +53,9 @@ void mem_init() {
     allocated_space = 0;
 
     memcpy(&heap, &initial_block, sizeof(heap_block));
+
+    printk("Sistema Inicializado\n");
+    printk("Tamanho da HEAP: %d\n", HEAP_SIZE);
 }
 
 // encerra o subsistema de memória RAM (heap)
@@ -66,11 +71,22 @@ int mem_avail() { return current_space; }
 // aloca um bloco de memória com o tamanho indicado
 // retorna ponteiro ou NULL se houver erro
 void* mem_alloc(int size) {
-    if (size <= 0) return NULL;
+    if (size <= 0) {
+        printk("Tamanho <= 0: Retornando NULL\n");
+        return NULL;
+    }
 
     unsigned int block_size = size;
 
-    block_size += (size) % ALIGNMENT;
+    if (current_space < block_size) {
+        printk("Tamanho atual insuficiente: Retornando NULL\n\n");
+        return NULL;
+    }
+
+    while (block_size % 16) block_size++;
+
+    // printk("Alocação de um bloco de %d + %d (%d) bytes\n", size,
+    //        (size % ALIGNMENT), block_size);
 
     heap_block* block = (heap_block*)heap;
     while (block != NULL) {
@@ -78,7 +94,15 @@ void* mem_alloc(int size) {
         block = block->next;
     }
 
-    if (block == NULL) return NULL;
+    if (block == NULL) {
+        printk("Não há blocos livres disponíveis: Retornando NULL\n\n");
+        return NULL;
+    }
+
+    // printk("Bloco de Memória alocado!\n");
+    // printk("Endereço: %p | Ponteiro %p | Tamanho %d\n",
+    //        (void*)block - (void*)heap, (void*)block->ptr - (void*)heap,
+    //        block_size);
 
     block->free = 0;
     if (block->size >= block_size + (sizeof(heap_block)) + ALIGNMENT) {
@@ -95,6 +119,11 @@ void* mem_alloc(int size) {
         block->size = block_size;
         block->next = next;
 
+        // printk("Novo bloco livre criado!\n");
+        // printk("Endereço: %p | Ponteiro %p | Tamanho %d\n",
+        //        (void*)next - (void*)heap, (void*)next->ptr - (void*)heap,
+        //        next->size);
+
         current_space -= sizeof(heap_block);
         free_blocks++;
     }
@@ -103,6 +132,8 @@ void* mem_alloc(int size) {
     allocated_space += block->size;
     allocated_blocks++;
     free_blocks--;
+
+    // printk("Bloco alocado com sucesso!\n\n");
 
     return block->ptr;
 }
@@ -119,11 +150,29 @@ int mem_free(void* ptr) {
     }
 
     if (block == NULL) return ERROR;
-
     block->free = 1;
+
+    free_blocks++;
+    allocated_blocks--;
+    allocated_space -= block->size;
+    current_space += block->size;
 
     return (NOERROR);
 }
 
 // gera um relatório sobre o uso da memória
-void mem_report() {}
+void mem_report() {
+    printk("heap: %d KB allocated (%d blocks), %d KB free (%d blocks)\n",
+           (allocated_space / 1000), allocated_blocks, (current_space / 1000),
+           free_blocks);
+
+    heap_block* block = (heap_block*)heap;
+    while (block != NULL) {
+        char* s = (block->free) ? ("free") : ("aloc");
+        printk("heap: block %5d: %p - %p %s prev %5d next %5d size %5d\n",
+               block->id, block->ptr, block->ptr + block->size, s,
+               (block->prev == NULL) ? (0) : (block->prev->id),
+               (block->next == NULL) ? (0) : (block->next->id), block->size);
+        block = block->next;
+    }
+}
