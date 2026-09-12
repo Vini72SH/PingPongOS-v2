@@ -1,10 +1,7 @@
 // PingPongOS - PingPong Operating System
 
-// Este arquivo PODE/DEVE ser alterado.
-
 // Alocador básico de memória heap.
 
-// somente para a implementação trivial
 #include <string.h>
 
 #include "lib/pplibc.h"
@@ -53,9 +50,6 @@ void mem_init() {
     allocated_space = 0;
 
     memcpy(&heap, &initial_block, sizeof(heap_block));
-
-    printk("Sistema Inicializado\n");
-    printk("Tamanho da HEAP: %d\n", HEAP_SIZE);
 }
 
 // encerra o subsistema de memória RAM (heap)
@@ -72,21 +66,16 @@ int mem_avail() { return current_space; }
 // retorna ponteiro ou NULL se houver erro
 void* mem_alloc(int size) {
     if (size <= 0) {
-        printk("Tamanho <= 0: Retornando NULL\n");
         return NULL;
     }
 
     unsigned int block_size = size;
 
     if (current_space < block_size) {
-        printk("Tamanho atual insuficiente: Retornando NULL\n\n");
         return NULL;
     }
 
     while (block_size % ALIGNMENT) block_size++;
-
-    // printk("Alocação de um bloco de %d + %d (%d) bytes\n", size,
-    //        (size % ALIGNMENT), block_size);
 
     heap_block* block = (heap_block*)heap;
     while (block != NULL) {
@@ -95,14 +84,8 @@ void* mem_alloc(int size) {
     }
 
     if (block == NULL) {
-        printk("Não há blocos livres disponíveis: Retornando NULL\n\n");
         return NULL;
     }
-
-    // printk("Bloco de Memória alocado!\n");
-    // printk("Endereço: %p | Ponteiro %p | Tamanho %d\n",
-    //        (void*)block - (void*)heap, (void*)block->ptr - (void*)heap,
-    //        block_size);
 
     block->free = 0;
     if (block->size >= block_size + (sizeof(heap_block)) + ALIGNMENT) {
@@ -113,16 +96,14 @@ void* mem_alloc(int size) {
         next->free = 1;
         next->prev = block;
         next->next = block->next;
+
+        if (next->next != NULL) next->next->prev = next;
+
         next->size = block->size - (block_size + sizeof(heap_block));
         next->ptr = (void*)((char*)next + (sizeof(heap_block)));
 
         block->size = block_size;
         block->next = next;
-
-        // printk("Novo bloco livre criado!\n");
-        // printk("Endereço: %p | Ponteiro %p | Tamanho %d\n",
-        //        (void*)next - (void*)heap, (void*)next->ptr - (void*)heap,
-        //        next->size);
 
         current_space -= sizeof(heap_block);
         free_blocks++;
@@ -132,8 +113,6 @@ void* mem_alloc(int size) {
     allocated_space += block->size;
     allocated_blocks++;
     free_blocks--;
-
-    // printk("Bloco alocado com sucesso!\n\n");
 
     return block->ptr;
 }
@@ -157,6 +136,31 @@ int mem_free(void* ptr) {
     allocated_space -= block->size;
     current_space += block->size;
 
+    heap_block* prev = block->prev;
+    heap_block* next = block->next;
+
+    if (prev != NULL && prev->free) {
+        free_blocks--;
+        current_space += sizeof(heap_block);
+
+        prev->next = block->next;
+        prev->size += block->size + sizeof(heap_block);
+
+        if (prev->next != NULL) prev->next->prev = prev;
+
+        block = prev;
+    }
+
+    if (next != NULL && next->free) {
+        free_blocks--;
+        current_space += sizeof(heap_block);
+
+        block->next = next->next;
+        block->size += next->size + sizeof(heap_block);
+
+        if (next->next != NULL) next->next->prev = block;
+    }
+
     return (NOERROR);
 }
 
@@ -169,7 +173,7 @@ void mem_report() {
     heap_block* block = (heap_block*)heap;
     while (block != NULL) {
         char* s = (block->free) ? ("free") : ("aloc");
-        printk("heap: block %5d: %p - %p %s prev %5d next %5d size %5d\n",
+        printk("heap: block %5d: %p - %p %s prev %5d next %5d size %9d\n",
                block->id, block->ptr, block->ptr + block->size, s,
                (block->prev == NULL) ? (0) : (block->prev->id),
                (block->next == NULL) ? (0) : (block->next->id), block->size);

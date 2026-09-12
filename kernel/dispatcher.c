@@ -74,7 +74,7 @@ void task_run(struct task_t* task) {
 
     queue_del(ready_tasks, task);
     task->current_queue = NULL;
-    task->quantum = 10;
+    task->quantum = QUANTUM;
     task->status = RUNNING;
     task_switch(task);
 }

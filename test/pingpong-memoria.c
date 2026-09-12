@@ -67,6 +67,8 @@ void user_main()
     status = mem_free(&status);
     assert(status == ERROR);
 
+    mem_report();
+
     // alocações aleatórias
     printk("Criando blocos de tamanho aleatório\n");
     avail_before = mem_avail();
