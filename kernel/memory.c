@@ -5,7 +5,6 @@
 // Alocador básico de memória heap.
 
 // somente para a implementação trivial
-#include <stdlib.h>
 #include <string.h>
 
 #define ERROR -1
@@ -67,6 +66,8 @@ int mem_avail() { return current_space; }
 // aloca um bloco de memória com o tamanho indicado
 // retorna ponteiro ou NULL se houver erro
 void* mem_alloc(int size) {
+    if (size <= 0) return NULL;
+
     unsigned int block_size = size;
 
     block_size += (size) % ALIGNMENT;
@@ -80,17 +81,20 @@ void* mem_alloc(int size) {
     if (block == NULL) return NULL;
 
     block->free = 0;
-    if (block->size >= block_size + sizeof(heap_block) + ALIGNMENT) {
+    if (block->size >= block_size + (sizeof(heap_block)) + ALIGNMENT) {
         heap_block* next;
 
-        next = (heap_block*)((void*)block->ptr + (char)block_size);
+        next = (heap_block*)((char*)block->ptr + block_size);
         next->id = bid++;
         next->free = 1;
         next->prev = block;
         next->next = block->next;
         next->size = block->size - (block_size + sizeof(heap_block));
-        next->ptr = (void*)(&next) + (char)sizeof(heap_block);
+        next->ptr = (void*)((char*)next + (sizeof(heap_block)));
+
         block->size = block_size;
+        block->next = next;
+
         current_space -= sizeof(heap_block);
         free_blocks++;
     }
@@ -98,15 +102,26 @@ void* mem_alloc(int size) {
     current_space -= block->size;
     allocated_space += block->size;
     allocated_blocks++;
+    free_blocks--;
 
     return block->ptr;
 }
 
 // libera um bloco de memória previamente alocado
 // retorna NOERROR se ok ou ERROR se ptr for NULL ou inválido
-int mem_free(void* ptr) { return NOERROR;
+int mem_free(void* ptr) {
     if (ptr == NULL) return ERROR;
-    free(ptr);
+
+    heap_block* block = (heap_block*)heap;
+    while (block != NULL) {
+        if (block->ptr == ptr) break;
+        block = block->next;
+    }
+
+    if (block == NULL) return ERROR;
+
+    block->free = 1;
+
     return (NOERROR);
 }
 
