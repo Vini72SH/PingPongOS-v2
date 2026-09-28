@@ -10,7 +10,7 @@
 #define NOERROR 0
 
 #define HEAP_SIZE 64 * 1024 * 1024  // 64MB
-#define ALIGNMENT 16
+#define ALIGNMENT 0x10
 
 static char heap[HEAP_SIZE];
 
@@ -75,7 +75,7 @@ void* mem_alloc(int size) {
         return NULL;
     }
 
-    while (block_size % ALIGNMENT) block_size++;
+    block_size = ((block_size - 1) | (ALIGNMENT - 1)) + 1;
 
     heap_block* block = (heap_block*)heap;
     while (block != NULL) {

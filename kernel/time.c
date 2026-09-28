@@ -14,12 +14,10 @@ extern struct task_t* current_task;
 
 void time_handler(int irq) {
     clock++;
-    if (current_task != NULL) {
-        current_task->cputime++;
-        if (current_task->type == USER) {
-            current_task->quantum--;
-            if (current_task->quantum == 0) task_yield();
-        }
+    current_task->cputime++;
+    if (current_task->type == USER) {
+        current_task->quantum--;
+        if (current_task->quantum == 0) task_yield();
     }
 }
 
