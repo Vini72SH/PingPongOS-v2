@@ -32,6 +32,9 @@ unsigned int allocated_blocks = 0;
 unsigned int current_space = HEAP_SIZE;
 unsigned int allocated_space = 0;
 
+void kernel_lock();
+void kernel_unlock();
+
 // inicia o subsistema de memória RAM (heap)
 // (chamada pelo núcleo na inicialização).
 void mem_init() {
@@ -69,6 +72,8 @@ void* mem_alloc(int size) {
         return NULL;
     }
 
+    kernel_lock();
+
     unsigned int block_size = size;
 
     if (current_space < block_size) {
@@ -84,6 +89,7 @@ void* mem_alloc(int size) {
     }
 
     if (block == NULL) {
+        kernel_unlock();
         return NULL;
     }
 
@@ -114,6 +120,8 @@ void* mem_alloc(int size) {
     allocated_blocks++;
     free_blocks--;
 
+    kernel_unlock();
+
     return block->ptr;
 }
 
@@ -122,13 +130,19 @@ void* mem_alloc(int size) {
 int mem_free(void* ptr) {
     if (ptr == NULL) return ERROR;
 
+    kernel_lock();
+
     heap_block* block = (heap_block*)heap;
     while (block != NULL) {
         if (block->ptr == ptr) break;
         block = block->next;
     }
 
-    if (block == NULL) return ERROR;
+    if (block == NULL) {
+        kernel_unlock();
+        return ERROR;
+    }
+
     block->free = 1;
 
     free_blocks++;
@@ -160,6 +174,8 @@ int mem_free(void* ptr) {
 
         if (next->next != NULL) next->next->prev = block;
     }
+
+    kernel_unlock();
 
     return (NOERROR);
 }

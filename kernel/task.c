@@ -14,6 +14,9 @@ const int STACKSIZE = 16384;
 
 long int uid = 1;
 
+int klock = 0;
+int preempt = 0;
+
 struct task_t kernel_task = {0};
 struct task_t* current_task = NULL;
 
@@ -181,5 +184,15 @@ void task_exit(int exit_code) {
         }
 
         task_switch(&kernel_task);
+    }
+}
+
+void kernel_lock() { klock = 1; }
+
+void kernel_unlock() {
+    klock = 0;
+    if (preempt) {
+        preempt = 0;
+        task_yield();
     }
 }
