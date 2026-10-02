@@ -26,11 +26,11 @@ struct request_t {
     int operation;
     int block;
     void* buffer;
+    struct task_t* task;
 };
 
 struct task_t* disk_manager;
 struct queue_t* requests;
-struct queue_t* waiting;
 extern struct queue_t* suspended_tasks;
 
 extern struct task_t* current_task;
@@ -66,12 +66,6 @@ void block_init(char* disk_image) {
         return;
     }
 
-    waiting = queue_create();
-    if (waiting == NULL) {
-        ppos_debug("Erro ao criar a fila de tarefas esperando\n");
-        return;
-    }
-
     sem_queue = sem_create(1);
     if (sem_queue < 0) {
         ppos_debug("Erro ao criar o semáforo\n");
@@ -86,7 +80,6 @@ void block_init(char* disk_image) {
 void block_term(char* disk_image) {
     if (sem_queue >= 0) sem_destroy(sem_queue);
     if (requests) queue_destroy(requests);
-    if (waiting) queue_destroy(waiting);
     task_destroy(disk_manager);
 }
 
@@ -119,11 +112,11 @@ int block_read(int block, void* buffer) {
     req->operation = READ;
     req->block = block;
     req->buffer = buffer;
+    req->task = current_task;
 
     sem_down(sem_queue);
     queue_add(requests, req);
-    queue_add(waiting, current_task);
-    queue_add(suspended_tasks, current_task);
+    queue_add(suspended_tasks, req->task);
     sem_up(sem_queue);
 
     task_awake(disk_manager);
@@ -146,11 +139,11 @@ int block_write(int block, void* buffer) {
     req->operation = WRITE;
     req->block = block;
     req->buffer = buffer;
+    req->task = current_task;
 
     sem_down(sem_queue);
     queue_add(requests, req);
-    queue_add(waiting, current_task);
-    queue_add(suspended_tasks, current_task);
+    queue_add(suspended_tasks, req->task);
     sem_up(sem_queue);
 
     task_awake(disk_manager);
@@ -165,40 +158,35 @@ int block_write(int block, void* buffer) {
 }
 
 void manager(void* arg) {
-    struct task_t* task;
-    struct request_t* req;
+    struct request_t* current_req = NULL;
     while (1) {
         if (irq) {
             irq = 0;
-            sem_down(sem_queue);
-            req = queue_head(requests);
-            task = queue_head(waiting);
-
-            queue_del(suspended_tasks, task);
-            queue_del(waiting, task);
-            queue_del(requests, req);
-            sem_up(sem_queue);
-
-            if (task && req) {
-                req->status = FINISHED;
-                task_awake(task);
+            if (current_req) {
+                sem_down(sem_queue);
+                queue_del(suspended_tasks, current_req->task);
+                sem_up(sem_queue);
+                current_req->status = FINISHED;
+                task_awake(current_req->task);
+                current_req = NULL;
             }
         }
 
         if (hw_disk(DISK_CMD_STATUS, 0, NULL) == DISK_STATUS_IDLE) {
             sem_down(sem_queue);
-            req = queue_head(requests);
-            while (req != NULL) {
-                if (req->status == READY) break;
-                req = queue_next(requests);
+            current_req = queue_head(requests);
+            while (current_req != NULL) {
+                if (current_req->status == READY) break;
+                current_req = queue_next(requests);
             }
+            queue_del(requests, current_req);
             sem_up(sem_queue);
 
-            if (req) {
-                req->status = WAITING;
-                int op = (req->operation == READ) ? (DISK_CMD_READ)
-                                                  : (DISK_CMD_WRITE);
-                hw_disk(op, req->block, req->buffer);
+            if (current_req) {
+                current_req->status = WAITING;
+                int op = (current_req->operation == READ) ? (DISK_CMD_READ)
+                                                          : (DISK_CMD_WRITE);
+                hw_disk(op, current_req->block, current_req->buffer);
             }
         }
 
