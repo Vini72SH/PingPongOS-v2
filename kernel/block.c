@@ -75,7 +75,7 @@ void block_init(char* disk_image) {
 
     sem_queue = sem_create(1);
     if (sem_queue < 0) {
-        ppos_debug("Erro ao criar o semáforo\n");
+        ppos_debug("Erro ao criar o semáforo do gerenciador de blocos\n");
         return;
     }
 

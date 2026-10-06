@@ -9,7 +9,7 @@
 // que lê e escreve/altera blocos do disco COM CACHE.
 
 #include <assert.h>
-#include "lib/libc.h"
+#include "lib/pplibc.h"
 #include "ppos.h"
 
 // corpo da tarefa principal
@@ -22,7 +22,7 @@ void user_main(void *arg)
     int time_start;
     int blk_inicio, blk_final;
 
-    printf("%5d ms: user: inicio\n", systime());
+    printk("%5d ms: user: inicio\n", time());
 
     // busca geometria do disco
     num_blk = block_blocks();
@@ -30,24 +30,24 @@ void user_main(void *arg)
     blk_size = block_size();
     assert(blk_size);
 
-    printf("%5d ms: disco contem %d blocos de %d bytes cada\n",
-           systime(), num_blk, blk_size);
+    printk("%5d ms: disco contem %d blocos de %d bytes cada\n",
+           time(), num_blk, blk_size);
 
     // aloca o buffer para ler blocos do disco
     buffer = mem_alloc(blk_size);
     assert(buffer);
 
-    time_start = systime();
+    time_start = time();
 
     // escreve blocos
     blk_inicio = 0;
     blk_final  = num_blk / 4;
     for (int i = blk_inicio; i < blk_final; i++)
     {
-        printf("%5d ms: escreve bloco %d\n", systime(), i);
+        printk("%5d ms: escreve bloco %d\n", time(), i);
         status = cache_write(i, buffer);
         if (status)
-            printf("Erro ao escrever bloco %d!\n", i);
+            printk("Erro ao escrever bloco %d!\n", i);
     }
 
     // lê blocos
@@ -55,10 +55,10 @@ void user_main(void *arg)
     blk_final  += num_blk / 8;
     for (int i = blk_inicio; i < blk_final; i++)
     {
-        printf("%5d ms: lendo bloco %d\n", systime(), i);
+        printk("%5d ms: lendo bloco %d\n", time(), i);
         status = cache_read(i, buffer);
         if (status)
-            printf("Erro ao ler bloco %d!\n", i);
+            printk("Erro ao ler bloco %d!\n", i);
     }
 
     // lê blocos
@@ -66,18 +66,18 @@ void user_main(void *arg)
     blk_final  += num_blk / 8;
     for (int i = blk_inicio; i < blk_final; i++)
     {
-        printf("%5d ms: lendo bloco %d\n", systime(), i);
+        printk("%5d ms: lendo bloco %d\n", time(), i);
         status = cache_read(i, buffer);
         if (status)
-            printf("Erro ao ler bloco %d!\n", i);
+            printk("Erro ao ler bloco %d!\n", i);
     }
 
-    printf("As operações COM CACHE demoraram %d ms\n", systime() - time_start);
+    printk("As operações COM CACHE demoraram %d ms\n", time() - time_start);
 
     // libera o buffer de blocos do disco
     mem_free(buffer);
 
-    printf("%5d ms: user fim\n", systime());
+    printk("%5d ms: user fim\n", time());
 
     task_exit(0);
 }
