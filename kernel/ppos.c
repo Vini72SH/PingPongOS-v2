@@ -7,15 +7,16 @@
 
 // Funções iniciais do PPOS
 
+#include "kernel/ppos.h"
+
 #include "hardware/cpu.h"
+#include "kernel/cache.h"
 #include "lib/pplibc.h"
-#include "ppos.h"
 
 //----------------------------------------------------------------------
 
 // Inicia o sistema operacional
-static void ppos_init()
-{
+static void ppos_init() {
     printk("PPOS: system initializing\n");
 
     // inicia os subsistemas
@@ -27,6 +28,7 @@ static void ppos_init()
     sem_init();
     mqueue_init();
     block_init("hardware/disk.dat");
+    cache_init();
 
     printk("PPOS: system ready (uptime %u ms)\n", time());
 }
@@ -34,11 +36,11 @@ static void ppos_init()
 //----------------------------------------------------------------------
 
 // Encerra o sistema operacional
-void ppos_term()
-{
+void ppos_term() {
     printk("PPOS: system terminating\n", time());
 
     // encerra os subsistemas (em ordem contrária ao ppos_init)
+    cache_term();
     block_term("hardware/disk.dat");
     mqueue_term();
     sem_term();
@@ -53,8 +55,7 @@ void ppos_term()
 
 //----------------------------------------------------------------------
 
-int main()
-{
+int main() {
     ppos_init();
     dispatcher();
     ppos_term();
