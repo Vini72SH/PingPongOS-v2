@@ -6,7 +6,6 @@
 
 #include "hardware/cpu.h"
 #include "kernel/task.h"
-#include "lib/pplibc.h"
 
 long int clock = 0;
 

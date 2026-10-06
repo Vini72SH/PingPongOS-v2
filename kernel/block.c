@@ -10,6 +10,7 @@
 #include "kernel/semaphore.h"
 #include "kernel/task.h"
 #include "kernel/tcb.h"
+#include "lib/pplibc.h"
 #include "lib/queue.h"
 
 #define READY 0
@@ -35,8 +36,10 @@ extern struct queue_t* suspended_tasks;
 
 extern struct task_t* current_task;
 
-int irq = 0;
+int irq;
 int sem_queue;
+int current_block;
+int num_blocks;
 
 void manager(void* arg);
 
@@ -48,6 +51,10 @@ void disk_handler(int i) {
 // inicia o subsistema de gestão do disco virtual armazenado em "disk_image"
 // (chamada pelo núcleo na inicialização).
 void block_init(char* disk_image) {
+    irq = 0;
+    current_block = 0;
+    num_blocks = 0;
+
     int status = hw_disk(DISK_CMD_INIT, 0, disk_image);
     if (status == ERROR) {
         ppos_debug("Erro ao inicializar o disco\n");
@@ -81,6 +88,8 @@ void block_term(char* disk_image) {
     if (sem_queue >= 0) sem_destroy(sem_queue);
     if (requests) queue_destroy(requests);
     task_destroy(disk_manager);
+
+    printk("Número de Blocos Percorridos: %d\n", num_blocks);
 }
 
 // retorna o tamanho de cada bloco do disco, em bytes
@@ -157,6 +166,114 @@ int block_write(int block, void* buffer) {
     return NOERROR;
 }
 
+// Política First Come, First Served
+struct request_t* fcfs() {
+    sem_down(sem_queue);
+    struct request_t* req = queue_head(requests);
+    while (req != NULL) {
+        if (req->status == READY) break;
+        req = queue_next(requests);
+    }
+
+    if (req != NULL) {
+        num_blocks += abs(req->block - current_block);
+        current_block = req->block;
+        queue_del(requests, req);
+    }
+    sem_up(sem_queue);
+
+    return req;
+}
+
+// Política Shortest Seek-Time First
+struct request_t* sstf() {
+    int shortest_block, current_distance;
+    struct request_t *req, *aux;
+
+    req = NULL;
+    sem_down(sem_queue);
+    req = aux = queue_head(requests);
+
+    if (req != NULL) {
+        shortest_block = req->block;
+        current_distance = abs(shortest_block - current_block);
+    }
+
+    while (aux != NULL) {
+        if (aux->status == READY &&
+            abs(aux->block - current_block) < current_distance) {
+            req = aux;
+            shortest_block = aux->block;
+            current_distance = abs(shortest_block - current_block);
+        }
+        aux = queue_next(requests);
+    }
+
+    if (req != NULL) {
+        num_blocks += abs(req->block - current_block);
+        current_block = shortest_block;
+        queue_del(requests, req);
+    }
+
+    sem_up(sem_queue);
+
+    return req;
+}
+
+// Política Circular Scan
+struct request_t* cscan() {
+    int next_block;
+    struct request_t *req, *aux;
+
+    sem_down(sem_queue);
+    req = NULL;
+    aux = queue_head(requests);
+
+    next_block = -1;
+
+    while (aux != NULL) {
+        if (aux->status == READY) {
+            if (aux->block >= current_block) {
+                if (next_block == -1) {
+                    next_block = aux->block;
+                    req = aux;
+                } else {
+                    if (aux->block < next_block) {
+                        next_block = aux->block;
+                        req = aux;
+                    }
+                }
+            }
+        }
+        aux = queue_next(requests);
+    }
+
+    // Não há nenhum pedido após a posição atual do leitor, reiniciar processo
+    if (req == NULL) {
+        aux = queue_head(requests);
+        if (aux != NULL) {
+            next_block = aux->block;
+            req = aux;
+        }
+        while (aux != NULL) {
+            if (aux->status == READY && aux->block <= next_block) {
+                next_block = aux->block;
+                req = aux;
+            }
+            aux = queue_next(requests);
+        }
+    }
+
+    if (req != NULL) {
+        num_blocks += abs(req->block - current_block);
+        current_block = next_block;
+        queue_del(requests, req);
+    }
+    sem_up(sem_queue);
+
+    return req;
+}
+
 void manager(void* arg) {
     struct request_t* current_req = NULL;
     while (1) {
@@ -173,14 +290,7 @@ void manager(void* arg) {
         }
 
         if (hw_disk(DISK_CMD_STATUS, 0, NULL) == DISK_STATUS_IDLE) {
-            sem_down(sem_queue);
-            current_req = queue_head(requests);
-            while (current_req != NULL) {
-                if (current_req->status == READY) break;
-                current_req = queue_next(requests);
-            }
-            queue_del(requests, current_req);
-            sem_up(sem_queue);
+            current_req = sstf();
 
             if (current_req) {
                 current_req->status = WAITING;
